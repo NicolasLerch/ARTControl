@@ -1,0 +1,291 @@
+'use client'
+
+import { Appointment, AppointmentStatus, AttendanceRecord, AuthUser, Patient, PatientTimelineItem } from '@/lib/types'
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000'
+
+type ApiErrorPayload = {
+  message?: string
+  code?: string
+  fieldErrors?: Record<string, string[] | undefined>
+}
+
+export class ApiError extends Error {
+  status: number
+  code?: string
+  fieldErrors?: Record<string, string[] | undefined>
+
+  constructor(status: number, payload: ApiErrorPayload) {
+    super(payload.message ?? 'Request failed')
+    this.status = status
+    this.code = payload.code
+    this.fieldErrors = payload.fieldErrors
+  }
+}
+
+type RequestOptions = RequestInit & {
+  query?: Record<string, string | number | boolean | undefined | null>
+}
+
+async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  const url = new URL(`${API_BASE_URL}${path}`)
+
+  if (options.query) {
+    Object.entries(options.query).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        url.searchParams.set(key, String(value))
+      }
+    })
+  }
+
+  const response = await fetch(url.toString(), {
+    ...options,
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(options.headers ?? {}),
+    },
+  })
+
+  if (response.status === 204) {
+    return undefined as T
+  }
+
+  const data = await response.json().catch(() => ({}))
+
+  if (!response.ok) {
+    throw new ApiError(response.status, data)
+  }
+
+  return data as T
+}
+
+function isoDateOnly(value: string) {
+  return value.slice(0, 10)
+}
+
+function mapStatusFromApi(status: 'PENDIENTE' | 'ASISTIO' | 'NO_ASISTIO' | 'CANCELADO'): AppointmentStatus {
+  return status.toLowerCase() as AppointmentStatus
+}
+
+function mapStatusToApi(status: AppointmentStatus) {
+  return status.toUpperCase() as 'PENDIENTE' | 'ASISTIO' | 'NO_ASISTIO' | 'CANCELADO'
+}
+
+function mapPatient(patient: {
+  id: string
+  nombre: string
+  apellido: string
+  dni: string
+  createdAt: string
+  updatedAt: string
+}): Patient {
+  return patient
+}
+
+function mapAppointment(appointment: {
+  id: string
+  patientId: string
+  patient?: {
+    id: string
+    nombre: string
+    apellido: string
+    dni: string
+    createdAt: string
+    updatedAt: string
+  }
+  fecha: string
+  hora: string
+  estado: 'PENDIENTE' | 'ASISTIO' | 'NO_ASISTIO' | 'CANCELADO'
+  observaciones?: string | null
+  createdAt: string
+  updatedAt: string
+  cancelledAt?: string | null
+}): Appointment {
+  return {
+    id: appointment.id,
+    patientId: appointment.patientId,
+    patient: appointment.patient ? mapPatient(appointment.patient) : undefined,
+    fecha: isoDateOnly(appointment.fecha),
+    hora: appointment.hora,
+    estado: mapStatusFromApi(appointment.estado),
+    observaciones: appointment.observaciones ?? '',
+    createdAt: appointment.createdAt,
+    updatedAt: appointment.updatedAt,
+    cancelledAt: appointment.cancelledAt ?? null,
+  }
+}
+
+function mapAttendance(attendance: {
+  id: string
+  patientId: string
+  appointmentId?: string | null
+  fechaAtencion: string
+  observaciones?: string | null
+  createdAt: string
+  updatedAt: string
+  patient?: {
+    id: string
+    nombre: string
+    apellido: string
+    dni: string
+  }
+}): AttendanceRecord {
+  return {
+    id: attendance.id,
+    patientId: attendance.patientId,
+    appointmentId: attendance.appointmentId ?? null,
+    fechaAtencion: attendance.fechaAtencion,
+    observaciones: attendance.observaciones ?? '',
+    createdAt: attendance.createdAt,
+    updatedAt: attendance.updatedAt,
+    patient: attendance.patient,
+  }
+}
+
+export async function getCurrentUser() {
+  const data = await request<{ user: AuthUser }>('/auth/me')
+  return data.user
+}
+
+export async function login(email: string, password: string) {
+  return request<{ requires2fa?: boolean; challengeId?: string; user?: AuthUser }>('/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({ email, password }),
+  })
+}
+
+export async function verifyTwoFactor(challengeId: string, token: string) {
+  return request<{ user: AuthUser }>('/auth/verify-2fa', {
+    method: 'POST',
+    body: JSON.stringify({ challengeId, token }),
+  })
+}
+
+export async function logout() {
+  return request<void>('/auth/logout', {
+    method: 'POST',
+  })
+}
+
+export async function setupTwoFactor() {
+  return request<{ secret: string; otpauthUrl: string; qrCodeDataUrl: string }>('/auth/setup-2fa', {
+    method: 'POST',
+  })
+}
+
+export async function confirmTwoFactor(token: string) {
+  return request<{ user: AuthUser }>('/auth/confirm-2fa', {
+    method: 'POST',
+    body: JSON.stringify({ token }),
+  })
+}
+
+export async function listPatients(params: {
+  q?: string
+  dni?: string
+  apellido?: string
+  page?: number
+  pageSize?: number
+} = {}) {
+  const data = await request<{
+    items: Array<{
+      id: string
+      nombre: string
+      apellido: string
+      dni: string
+      createdAt: string
+      updatedAt: string
+    }>
+    total: number
+    page: number
+    pageSize: number
+  }>('/patients', { query: params })
+
+  return {
+    ...data,
+    items: data.items.map(mapPatient),
+  }
+}
+
+export async function createPatient(payload: Pick<Patient, 'nombre' | 'apellido' | 'dni'>) {
+  const data = await request<{
+    patient: {
+      id: string
+      nombre: string
+      apellido: string
+      dni: string
+      createdAt: string
+      updatedAt: string
+    }
+  }>('/patients', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+
+  return mapPatient(data.patient)
+}
+
+export async function getPatientDetail(patientId: string) {
+  const data = await request<{
+    patient: {
+      id: string
+      nombre: string
+      apellido: string
+      dni: string
+      createdAt: string
+      updatedAt: string
+    }
+    timeline: PatientTimelineItem[]
+  }>(`/patients/${patientId}`)
+
+  return {
+    patient: mapPatient(data.patient),
+    timeline: data.timeline,
+  }
+}
+
+export async function listAppointments(params: {
+  date?: string
+  from?: string
+  to?: string
+  status?: AppointmentStatus
+  patientId?: string
+} = {}) {
+  const data = await request<{ items: Array<Parameters<typeof mapAppointment>[0]> }>('/appointments', {
+    query: {
+      ...params,
+      status: params.status ? mapStatusToApi(params.status) : undefined,
+    },
+  })
+
+  return data.items.map(mapAppointment)
+}
+
+export async function createAppointment(payload: {
+  patientId: string
+  fecha: string
+  hora: string
+  observaciones?: string
+}) {
+  const data = await request<{ appointment: Parameters<typeof mapAppointment>[0] }>('/appointments', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+
+  return mapAppointment(data.appointment)
+}
+
+export async function updateAppointmentStatus(id: string, estado: AppointmentStatus) {
+  const data = await request<{ appointment: Parameters<typeof mapAppointment>[0] }>(`/appointments/${id}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify({ estado: mapStatusToApi(estado) }),
+  })
+
+  return mapAppointment(data.appointment)
+}
+
+export async function listTodayAttendances() {
+  const data = await request<{ items: Array<Parameters<typeof mapAttendance>[0]> }>('/attendances/today')
+  return data.items.map(mapAttendance)
+}

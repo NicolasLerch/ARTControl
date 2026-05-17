@@ -1,0 +1,75 @@
+'use client'
+
+import { useState, startTransition } from 'react'
+import { useRouter } from 'next/navigation'
+import { Header } from '@/components/layout/header'
+import { Navigation } from '@/components/layout/navigation'
+import { AppointmentsDashboard } from '@/components/appointments/appointments-dashboard'
+import { CreateAppointmentModal } from '@/components/appointments/create-appointment-modal'
+import { PatientsList } from '@/components/patients/patients-list'
+import { AttendedToday } from '@/components/attended/attended-today'
+import { ComingSoonPanel } from '@/components/shared/coming-soon-panel'
+import { TwoFactorSetupCard } from '@/components/auth/two-factor-setup-card'
+import { useAuthSession } from '@/lib/hooks/use-auth-session'
+import { logout } from '@/lib/api/client'
+
+export default function HomePage() {
+  const router = useRouter()
+  const { user, loading, setUser } = useAuthSession(true)
+  const [activeTab, setActiveTab] = useState('turnos')
+  const [showAddAppointment, setShowAddAppointment] = useState(false)
+
+  const handleLogout = async () => {
+    await logout()
+    startTransition(() => {
+      setUser(null)
+      router.replace('/login')
+    })
+  }
+
+  const renderContent = () => {
+    switch (activeTab) {
+      case 'turnos':
+        return <AppointmentsDashboard onAddAppointment={() => setShowAddAppointment(true)} />
+      case 'pacientes':
+        return <PatientsList onAddAppointment={() => setShowAddAppointment(true)} />
+      case 'atendidos':
+        return <AttendedToday />
+      case 'vademecum':
+        return <ComingSoonPanel title="Vademécum" description="Esta pestaña queda en standby para una etapa posterior del producto." />
+      case 'farmacias':
+        return <ComingSoonPanel title="Farmacias" description="La integración operativa de farmacias queda fuera del MVP y se retomará más adelante." />
+      case 'especialistas':
+        return <ComingSoonPanel title="Horarios especialistas" description="La agenda de especialistas queda marcada como próxima funcionalidad." />
+      default:
+        return <AppointmentsDashboard onAddAppointment={() => setShowAddAppointment(true)} />
+    }
+  }
+
+  if (loading || !user) {
+    return (
+      <main className="flex min-h-screen items-center justify-center">
+        <p className="text-sm text-muted-foreground">Cargando sesión...</p>
+      </main>
+    )
+  }
+
+  return (
+    <div className="flex min-h-screen flex-col">
+      <Header user={user} onLogout={handleLogout} />
+      <Navigation activeTab={activeTab} onTabChange={setActiveTab} />
+
+      <main className="flex-1 overflow-hidden p-6">
+        <div className="mx-auto h-full max-w-[1600px]">
+          <TwoFactorSetupCard user={user} onEnabled={setUser} />
+          {renderContent()}
+        </div>
+      </main>
+
+      <CreateAppointmentModal
+        open={showAddAppointment}
+        onOpenChange={setShowAddAppointment}
+      />
+    </div>
+  )
+}
