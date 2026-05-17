@@ -12,8 +12,12 @@ import { es } from 'date-fns/locale'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-export function AppointmentCalendar() {
-  const [selectedDate, setSelectedDate] = useState(new Date())
+interface AppointmentCalendarProps {
+  selectedDate: Date
+  onSelectDate: (date: Date) => void
+}
+
+export function AppointmentCalendar({ selectedDate, onSelectDate }: AppointmentCalendarProps) {
   const [currentMonth, setCurrentMonth] = useState(new Date())
   const [appointments, setAppointments] = useState<Appointment[]>([])
 
@@ -62,7 +66,7 @@ export function AppointmentCalendar() {
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={() => {
               setCurrentMonth(new Date())
-              setSelectedDate(new Date())
+              onSelectDate(new Date())
             }}>
               Hoy
             </Button>
@@ -101,7 +105,7 @@ export function AppointmentCalendar() {
             return (
               <button
                 key={idx}
-                onClick={() => setSelectedDate(day)}
+                onClick={() => onSelectDate(day)}
                 className={cn(
                   'relative flex min-h-[80px] flex-col items-center rounded-lg p-1 text-sm transition-colors hover:bg-accent',
                   !isCurrentMonth && 'text-muted-foreground/50',

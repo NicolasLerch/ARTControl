@@ -159,16 +159,17 @@ patientsRouter.delete('/:id', async (req, res, next) => {
       });
     }
 
-    if (related.appointments.length > 0 || related.attendances.length > 0) {
-      return res.status(409).json({
-        message: 'No se puede eliminar un paciente con historial',
-        code: 'PATIENT_HAS_HISTORY',
-      });
-    }
-
-    await prisma.patient.delete({
-      where: { id: req.params.id },
-    });
+    await prisma.$transaction([
+      prisma.attendance.deleteMany({
+        where: { patientId: req.params.id },
+      }),
+      prisma.appointment.deleteMany({
+        where: { patientId: req.params.id },
+      }),
+      prisma.patient.delete({
+        where: { id: req.params.id },
+      }),
+    ]);
 
     res.status(204).send();
   } catch (error) {

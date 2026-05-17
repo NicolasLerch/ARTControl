@@ -12,7 +12,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { createPatient } from '@/lib/api/client'
+import { createPatient, updatePatient } from '@/lib/api/client'
 import { Patient } from '@/lib/types'
 
 interface CreatePatientModalProps {
@@ -20,9 +20,16 @@ interface CreatePatientModalProps {
   onOpenChange: (open: boolean) => void
   onPatientCreated?: (patient: Patient) => void
   initialDni?: string
+  patientToEdit?: Patient | null
 }
 
-export function CreatePatientModal({ open, onOpenChange, onPatientCreated, initialDni = '' }: CreatePatientModalProps) {
+export function CreatePatientModal({
+  open,
+  onOpenChange,
+  onPatientCreated,
+  initialDni = '',
+  patientToEdit = null,
+}: CreatePatientModalProps) {
   const [formData, setFormData] = useState({
     nombre: '',
     apellido: '',
@@ -31,18 +38,34 @@ export function CreatePatientModal({ open, onOpenChange, onPatientCreated, initi
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    if (open) {
-      setFormData((prev) => ({ ...prev, dni: initialDni }))
+    if (!open) return
+
+    if (patientToEdit) {
+      setFormData({
+        nombre: patientToEdit.nombre,
+        apellido: patientToEdit.apellido,
+        dni: patientToEdit.dni,
+      })
+      return
     }
-  }, [initialDni, open])
+
+    setFormData({
+      nombre: '',
+      apellido: '',
+      dni: initialDni,
+    })
+  }, [initialDni, open, patientToEdit])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
 
     try {
-      const newPatient = await createPatient(formData)
-      onPatientCreated?.(newPatient)
+      const savedPatient = patientToEdit
+        ? await updatePatient(patientToEdit.id, formData)
+        : await createPatient(formData)
+
+      onPatientCreated?.(savedPatient)
       onOpenChange(false)
       setFormData({
         nombre: '',
@@ -62,9 +85,9 @@ export function CreatePatientModal({ open, onOpenChange, onPatientCreated, initi
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[460px]">
         <DialogHeader>
-          <DialogTitle>Nuevo paciente</DialogTitle>
+          <DialogTitle>{patientToEdit ? 'Editar paciente' : 'Nuevo paciente'}</DialogTitle>
           <DialogDescription>
-            Para el MVP sólo guardamos nombre, apellido y DNI.
+            Para el MVP solo guardamos nombre, apellido y DNI.
           </DialogDescription>
         </DialogHeader>
 
@@ -110,7 +133,7 @@ export function CreatePatientModal({ open, onOpenChange, onPatientCreated, initi
               Cancelar
             </Button>
             <Button type="submit" disabled={loading}>
-              {loading ? 'Guardando...' : 'Guardar paciente'}
+              {loading ? 'Guardando...' : patientToEdit ? 'Guardar cambios' : 'Guardar paciente'}
             </Button>
           </DialogFooter>
         </form>

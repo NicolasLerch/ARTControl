@@ -24,19 +24,29 @@ import { format } from 'date-fns'
 interface CreateAppointmentModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  initialDate?: string
 }
 
-export function CreateAppointmentModal({ open, onOpenChange }: CreateAppointmentModalProps) {
+export function CreateAppointmentModal({ open, onOpenChange, initialDate }: CreateAppointmentModalProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<Patient[]>([])
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null)
   const [showCreatePatient, setShowCreatePatient] = useState(false)
   const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState({
-    fecha: format(new Date(), 'yyyy-MM-dd'),
+    fecha: initialDate ?? format(new Date(), 'yyyy-MM-dd'),
     hora: '09:00',
     observaciones: ''
   })
+
+  useEffect(() => {
+    if (open) {
+      setFormData((prev) => ({
+        ...prev,
+        fecha: initialDate ?? format(new Date(), 'yyyy-MM-dd'),
+      }))
+    }
+  }, [initialDate, open])
 
   useEffect(() => {
     let active = true
@@ -87,7 +97,7 @@ export function CreateAppointmentModal({ open, onOpenChange }: CreateAppointment
     setSearchResults([])
     setSelectedPatient(null)
     setFormData({
-      fecha: format(new Date(), 'yyyy-MM-dd'),
+      fecha: initialDate ?? format(new Date(), 'yyyy-MM-dd'),
       hora: '09:00',
       observaciones: ''
     })
