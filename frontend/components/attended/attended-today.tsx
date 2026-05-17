@@ -42,12 +42,18 @@ function currentTimeValue() {
   return format(new Date(), 'HH:mm')
 }
 
+function parseLocalDate(dateString: string) {
+  const [year, month, day] = dateString.split('-').map(Number)
+  return new Date(year, month - 1, day)
+}
+
 interface RegisterAttendedPatientModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  selectedDate: string
 }
 
-function RegisterAttendedPatientModal({ open, onOpenChange }: RegisterAttendedPatientModalProps) {
+function RegisterAttendedPatientModal({ open, onOpenChange, selectedDate }: RegisterAttendedPatientModalProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<Patient[]>([])
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null)
@@ -112,7 +118,7 @@ function RegisterAttendedPatientModal({ open, onOpenChange }: RegisterAttendedPa
     try {
       const appointment = await createAppointment({
         patientId: selectedPatient.id,
-        fecha: format(new Date(), 'yyyy-MM-dd'),
+        fecha: selectedDate,
         hora: formData.hora,
         observaciones: formData.observaciones,
       })
@@ -252,7 +258,7 @@ function RegisterAttendedPatientModal({ open, onOpenChange }: RegisterAttendedPa
                 </div>
                 <div className="space-y-2">
                   <Label>Fecha</Label>
-                  <Input value={format(new Date(), 'yyyy-MM-dd')} disabled readOnly type="date" />
+                  <Input value={selectedDate} disabled readOnly type="date" />
                 </div>
               </div>
 
@@ -295,13 +301,14 @@ export function AttendedToday() {
   const [showPatientModal, setShowPatientModal] = useState(false)
   const [editingPatient, setEditingPatient] = useState<Patient | null>(null)
   const [showRegisterAttended, setShowRegisterAttended] = useState(false)
+  const [selectedDate, setSelectedDate] = useState(() => format(new Date(), 'yyyy-MM-dd'))
 
   useEffect(() => {
     let active = true
 
     const load = async () => {
       const items = await listAppointments({
-        date: format(new Date(), 'yyyy-MM-dd'),
+        date: selectedDate,
       })
 
       if (active) {
@@ -316,7 +323,7 @@ export function AttendedToday() {
       active = false
       unsubscribe()
     }
-  }, [])
+  }, [selectedDate])
 
   const attendedAppointments = appointments.filter((appointment) => appointment.estado === 'asistio')
 
@@ -342,12 +349,18 @@ export function AttendedToday() {
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-lg">Atendidos hoy</CardTitle>
+              <CardTitle className="text-lg">Pacientes atendidos</CardTitle>
               <p className="mt-1 text-sm text-muted-foreground">
-                {format(new Date(), "EEEE d 'de' MMMM, yyyy", { locale: es })}
+                {format(parseLocalDate(selectedDate), "EEEE d 'de' MMMM, yyyy", { locale: es })}
               </p>
             </div>
             <div className="flex items-center gap-2">
+              <Input
+                type="date"
+                value={selectedDate}
+                onChange={(event) => setSelectedDate(event.target.value)}
+                className="w-[170px]"
+              />
               <Badge variant="secondary" className="bg-success/20 text-success">
                 <UserCheck className="mr-1 h-3 w-3" />
                 {attendedAppointments.length} pacientes
@@ -367,7 +380,7 @@ export function AttendedToday() {
                 <UserCheck className="h-6 w-6 text-muted-foreground" />
               </div>
               <p className="mt-3 text-sm text-muted-foreground">
-                No hay pacientes atendidos hoy
+                No hay pacientes atendidos para la fecha seleccionada
               </p>
             </div>
           ) : (
@@ -459,6 +472,7 @@ export function AttendedToday() {
       <RegisterAttendedPatientModal
         open={showRegisterAttended}
         onOpenChange={setShowRegisterAttended}
+        selectedDate={selectedDate}
       />
 
       <CreatePatientModal
