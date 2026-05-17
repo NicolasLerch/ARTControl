@@ -226,6 +226,30 @@ export async function createPatient(payload: Pick<Patient, 'nombre' | 'apellido'
   return mapPatient(data.patient)
 }
 
+export async function updatePatient(patientId: string, payload: Partial<Pick<Patient, 'nombre' | 'apellido' | 'dni'>>) {
+  const data = await request<{
+    patient: {
+      id: string
+      nombre: string
+      apellido: string
+      dni: string
+      createdAt: string
+      updatedAt: string
+    }
+  }>(`/patients/${patientId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  })
+
+  return mapPatient(data.patient)
+}
+
+export async function deletePatient(patientId: string) {
+  return request<void>(`/patients/${patientId}`, {
+    method: 'DELETE',
+  })
+}
+
 export async function getPatientDetail(patientId: string) {
   const data = await request<{
     patient: {

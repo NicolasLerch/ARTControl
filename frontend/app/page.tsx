@@ -12,12 +12,14 @@ import { ComingSoonPanel } from '@/components/shared/coming-soon-panel'
 import { TwoFactorSetupCard } from '@/components/auth/two-factor-setup-card'
 import { useAuthSession } from '@/lib/hooks/use-auth-session'
 import { logout } from '@/lib/api/client'
+import { format } from 'date-fns'
 
 export default function HomePage() {
   const router = useRouter()
   const { user, loading, setUser } = useAuthSession(true)
   const [activeTab, setActiveTab] = useState('turnos')
   const [showAddAppointment, setShowAddAppointment] = useState(false)
+  const [appointmentDefaultDate, setAppointmentDefaultDate] = useState(() => format(new Date(), 'yyyy-MM-dd'))
 
   const handleLogout = async () => {
     await logout()
@@ -30,9 +32,15 @@ export default function HomePage() {
   const renderContent = () => {
     switch (activeTab) {
       case 'turnos':
-        return <AppointmentsDashboard onAddAppointment={() => setShowAddAppointment(true)} />
+        return <AppointmentsDashboard onAddAppointment={(date) => {
+          setAppointmentDefaultDate(format(date, 'yyyy-MM-dd'))
+          setShowAddAppointment(true)
+        }} />
       case 'pacientes':
-        return <PatientsList onAddAppointment={() => setShowAddAppointment(true)} />
+        return <PatientsList onAddAppointment={() => {
+          setAppointmentDefaultDate(format(new Date(), 'yyyy-MM-dd'))
+          setShowAddAppointment(true)
+        }} />
       case 'atendidos':
         return <AttendedToday />
       case 'vademecum':
@@ -42,7 +50,10 @@ export default function HomePage() {
       case 'especialistas':
         return <ComingSoonPanel title="Horarios especialistas" description="La agenda de especialistas queda marcada como próxima funcionalidad." />
       default:
-        return <AppointmentsDashboard onAddAppointment={() => setShowAddAppointment(true)} />
+        return <AppointmentsDashboard onAddAppointment={(date) => {
+          setAppointmentDefaultDate(format(date, 'yyyy-MM-dd'))
+          setShowAddAppointment(true)
+        }} />
     }
   }
 
@@ -69,6 +80,7 @@ export default function HomePage() {
       <CreateAppointmentModal
         open={showAddAppointment}
         onOpenChange={setShowAddAppointment}
+        initialDate={appointmentDefaultDate}
       />
     </div>
   )

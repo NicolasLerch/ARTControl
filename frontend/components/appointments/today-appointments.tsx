@@ -14,7 +14,7 @@ import {
 import { emitDataChanged, subscribeDataChanged } from '@/lib/api/events'
 import { listAppointments, updateAppointmentStatus } from '@/lib/api/client'
 import { AppointmentStatus, Appointment } from '@/lib/types'
-import { format } from 'date-fns'
+import { format, isSameDay } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { Clock, User, FileText, MoreVertical, Check, X, Ban } from 'lucide-react'
 
@@ -27,9 +27,10 @@ const statusConfig: Record<AppointmentStatus, { label: string; className: string
 
 interface TodayAppointmentsProps {
   onAddAppointment: () => void
+  selectedDate: Date
 }
 
-export function TodayAppointments({ onAddAppointment }: TodayAppointmentsProps) {
+export function TodayAppointments({ onAddAppointment, selectedDate }: TodayAppointmentsProps) {
   const [appointments, setAppointments] = useState<Appointment[]>([])
 
   useEffect(() => {
@@ -37,7 +38,7 @@ export function TodayAppointments({ onAddAppointment }: TodayAppointmentsProps) 
 
     const loadAppointments = async () => {
       const items = await listAppointments({
-        date: format(new Date(), 'yyyy-MM-dd'),
+        date: format(selectedDate, 'yyyy-MM-dd'),
       })
 
       if (active) {
@@ -52,10 +53,13 @@ export function TodayAppointments({ onAddAppointment }: TodayAppointmentsProps) 
       active = false
       unsubscribe()
     }
-  }, [])
+  }, [selectedDate])
 
   const pendingCount = appointments.filter((appointment) => appointment.estado === 'pendiente').length
   const attendedCount = appointments.filter((appointment) => appointment.estado === 'asistio').length
+  const isToday = isSameDay(selectedDate, new Date())
+  // const title = isToday ? 'Turnos de hoy' : 'Turnos del día'
+  const title: string = isToday ? 'Turnos de hoy' : `${format(selectedDate, "d 'de' MMMM", { locale: es })}`
 
   const handleStatusUpdate = async (id: string, status: AppointmentStatus) => {
     await updateAppointmentStatus(id, status)
@@ -67,9 +71,9 @@ export function TodayAppointments({ onAddAppointment }: TodayAppointmentsProps) 
       <CardHeader className="flex-shrink-0 pb-3">
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle className="text-lg">Turnos de hoy</CardTitle>
+            <CardTitle className="text-lg">{title}</CardTitle>
             <p className="mt-1 text-sm text-muted-foreground">
-              {format(new Date(), "EEEE d 'de' MMMM", { locale: es })}
+              {format(selectedDate, "EEEE", { locale: es })}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -93,7 +97,7 @@ export function TodayAppointments({ onAddAppointment }: TodayAppointmentsProps) 
               <div className="rounded-full bg-muted p-3">
                 <Clock className="h-6 w-6 text-muted-foreground" />
               </div>
-              <p className="mt-3 text-sm text-muted-foreground">No hay turnos para hoy</p>
+              <p className="mt-3 text-sm text-muted-foreground">No hay turnos para la fecha seleccionada</p>
             </div>
           ) : (
             <div className="space-y-3">
