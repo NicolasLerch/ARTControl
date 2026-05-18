@@ -125,7 +125,6 @@ authRouter.post('/verify-2fa', verifyTwoFactorLimiter, async (req, res, next) =>
     });
 
     if (!user || !user.totpEnabled || !user.totpSecret) {
-      pendingChallenges.delete(payload.challengeId);
       return res.status(401).json({
         message: '2FA no disponible',
         code: 'INVALID_CHALLENGE',
@@ -140,8 +139,6 @@ authRouter.post('/verify-2fa', verifyTwoFactorLimiter, async (req, res, next) =>
         code: 'INVALID_2FA_TOKEN',
       });
     }
-
-    pendingChallenges.delete(payload.challengeId);
 
     const session = await createPersistentSession(req, user.id);
     res.cookie(SESSION_COOKIE_NAME, session.token, getSessionCookieOptions(session.expiresAt));

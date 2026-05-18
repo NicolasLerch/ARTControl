@@ -1,12 +1,12 @@
 import { Router } from 'express';
+import rateLimit from 'express-rate-limit';
 import { SESSION_COOKIE_NAME, getSessionCookieOptions } from '../../config/cookies.js';
 import { buildTotpEnrollment, createTotpSecret, verifyTotpToken } from '../../lib/totp.js';
 import { prisma } from '../../lib/prisma.js';
-import { hashToken, generateChallengeId, generateSessionToken } from '../../lib/crypto.js';
+import { hashToken, createChallengeToken, verifyChallengeToken, generateSessionToken } from '../../lib/crypto.js';
 import { loginSchema, verifyTwoFactorSchema, confirmTwoFactorSchema } from '../../schemas/auth.js';
 import { verifyPassword } from '../../lib/password.js';
 import { requireAuth } from '../../middlewares/auth.js';
-const pendingChallenges = new Map();
 const SESSION_DURATION_MS = 1000 * 60 * 60 * 24 * 7;
 function serializeAuthUser(user) {
     return {
@@ -34,8 +34,28 @@ async function createPersistentSession(req, userId) {
         expiresAt,
     };
 }
+const loginLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 3,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: {
+        message: 'Demasiados intentos de login',
+        code: 'RATE_LIMITED',
+    },
+});
+const verifyTwoFactorLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 3,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: {
+        message: 'Demasiados intentos de verificación 2FA',
+        code: 'RATE_LIMITED',
+    },
+});
 export const authRouter = Router();
-authRouter.post('/login', async (req, res, next) => {
+authRouter.post('/login', loginLimiter, async (req, res, next) => {
     try {
         const payload = loginSchema.parse(req.body);
         const user = await prisma.user.findUnique({
@@ -55,11 +75,8 @@ authRouter.post('/login', async (req, res, next) => {
             });
         }
         if (user.totpEnabled && user.totpSecret) {
-            const challengeId = generateChallengeId();
-            pendingChallenges.set(challengeId, {
-                userId: user.id,
-                expiresAt: Date.now() + 1000 * 60 * 10,
-            });
+            const expiresAt = Date.now() + 1000 * 60 * 10;
+            const challengeId = createChallengeToken(user.id, expiresAt);
             return res.json({
                 requires2fa: true,
                 challengeId,
@@ -75,12 +92,11 @@ authRouter.post('/login', async (req, res, next) => {
         next(error);
     }
 });
-authRouter.post('/verify-2fa', async (req, res, next) => {
+authRouter.post('/verify-2fa', verifyTwoFactorLimiter, async (req, res, next) => {
     try {
         const payload = verifyTwoFactorSchema.parse(req.body);
-        const challenge = pendingChallenges.get(payload.challengeId);
+        const challenge = verifyChallengeToken(payload.challengeId);
         if (!challenge || challenge.expiresAt < Date.now()) {
-            pendingChallenges.delete(payload.challengeId);
             return res.status(401).json({
                 message: 'Desafío expirado',
                 code: 'INVALID_CHALLENGE',
@@ -90,7 +106,6 @@ authRouter.post('/verify-2fa', async (req, res, next) => {
             where: { id: challenge.userId },
         });
         if (!user || !user.totpEnabled || !user.totpSecret) {
-            pendingChallenges.delete(payload.challengeId);
             return res.status(401).json({
                 message: '2FA no disponible',
                 code: 'INVALID_CHALLENGE',
@@ -103,7 +118,6 @@ authRouter.post('/verify-2fa', async (req, res, next) => {
                 code: 'INVALID_2FA_TOKEN',
             });
         }
-        pendingChallenges.delete(payload.challengeId);
         const session = await createPersistentSession(req, user.id);
         res.cookie(SESSION_COOKIE_NAME, session.token, getSessionCookieOptions(session.expiresAt));
         return res.json({
