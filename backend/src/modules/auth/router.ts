@@ -87,16 +87,6 @@ authRouter.post('/login', loginLimiter, async (req, res, next) => {
       });
     }
 
-    if (user.totpEnabled && user.totpSecret) {
-      const expiresAt = Date.now() + 1000 * 60 * 10;
-      const challengeId = createChallengeToken(user.id, expiresAt);
-
-      return res.json({
-        requires2fa: true,
-        challengeId,
-      });
-    }
-
     const session = await createPersistentSession(req, user.id);
     res.cookie(SESSION_COOKIE_NAME, session.token, getSessionCookieOptions(session.expiresAt));
 
