@@ -6,7 +6,7 @@ export const loginSchema = z.object({
 });
 
 export const verifyTwoFactorSchema = z.object({
-  challengeId: z.string().uuid(),
+  challengeId: z.string().min(1),
   token: z.string().length(6).regex(/^\d{6}$/),
 });
 
