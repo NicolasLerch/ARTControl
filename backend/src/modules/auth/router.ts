@@ -3,17 +3,11 @@ import rateLimit from 'express-rate-limit';
 import { SESSION_COOKIE_NAME, getSessionCookieOptions } from '../../config/cookies.js';
 import { buildTotpEnrollment, createTotpSecret, verifyTotpToken } from '../../lib/totp.js';
 import { prisma } from '../../lib/prisma.js';
-import { hashToken, generateChallengeId, generateSessionToken } from '../../lib/crypto.js';
+import { hashToken, createChallengeToken, verifyChallengeToken, generateSessionToken } from '../../lib/crypto.js';
 import { loginSchema, verifyTwoFactorSchema, confirmTwoFactorSchema } from '../../schemas/auth.js';
 import { verifyPassword } from '../../lib/password.js';
 import { requireAuth, type AuthedRequest } from '../../middlewares/auth.js';
 
-type PendingChallenge = {
-  userId: string;
-  expiresAt: number;
-};
-
-const pendingChallenges = new Map<string, PendingChallenge>();
 const SESSION_DURATION_MS = 1000 * 60 * 60 * 24 * 7;
 
 function serializeAuthUser(user: { id: string; email: string; role: 'ADMIN' | 'USER'; totpEnabled: boolean }) {
@@ -94,11 +88,8 @@ authRouter.post('/login', loginLimiter, async (req, res, next) => {
     }
 
     if (user.totpEnabled && user.totpSecret) {
-      const challengeId = generateChallengeId();
-      pendingChallenges.set(challengeId, {
-        userId: user.id,
-        expiresAt: Date.now() + 1000 * 60 * 10,
-      });
+      const expiresAt = Date.now() + 1000 * 60 * 10;
+      const challengeId = createChallengeToken(user.id, expiresAt);
 
       return res.json({
         requires2fa: true,
@@ -120,10 +111,9 @@ authRouter.post('/login', loginLimiter, async (req, res, next) => {
 authRouter.post('/verify-2fa', verifyTwoFactorLimiter, async (req, res, next) => {
   try {
     const payload = verifyTwoFactorSchema.parse(req.body);
-    const challenge = pendingChallenges.get(payload.challengeId);
+    const challenge = verifyChallengeToken(payload.challengeId);
 
     if (!challenge || challenge.expiresAt < Date.now()) {
-      pendingChallenges.delete(payload.challengeId);
       return res.status(401).json({
         message: 'Desafío expirado',
         code: 'INVALID_CHALLENGE',
