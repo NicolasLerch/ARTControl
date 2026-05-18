@@ -9,6 +9,17 @@ import { appointmentsRouter } from '../modules/appointments/router.js';
 import { attendancesRouter } from '../modules/attendances/router.js';
 import { requireAuth } from '../middlewares/auth.js';
 
+// const loginLimiter = rateLimit({
+//   windowMs: 15 * 60 * 1000,
+//   limit: 10,
+//   standardHeaders: true,
+//   legacyHeaders: false,
+//   message: {
+//     message: 'Demasiados intentos de login',
+//     code: 'RATE_LIMITED',
+//   },
+// });
+
 export function createApp() {
   const app = express();
 
