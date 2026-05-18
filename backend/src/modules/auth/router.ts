@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import rateLimit from 'express-rate-limit';
 import { SESSION_COOKIE_NAME, getSessionCookieOptions } from '../../config/cookies.js';
 import { buildTotpEnrollment, createTotpSecret, verifyTotpToken } from '../../lib/totp.js';
 import { prisma } from '../../lib/prisma.js';
@@ -45,9 +46,31 @@ async function createPersistentSession(req: AuthedRequest, userId: string) {
   };
 }
 
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 3,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    message: 'Demasiados intentos de login',
+    code: 'RATE_LIMITED',
+  },
+});
+
+const verifyTwoFactorLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 3,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    message: 'Demasiados intentos de verificación 2FA',
+    code: 'RATE_LIMITED',
+  },
+});
+
 export const authRouter = Router();
 
-authRouter.post('/login', async (req, res, next) => {
+authRouter.post('/login', loginLimiter, async (req, res, next) => {
   try {
     const payload = loginSchema.parse(req.body);
     const user = await prisma.user.findUnique({
@@ -94,7 +117,7 @@ authRouter.post('/login', async (req, res, next) => {
   }
 });
 
-authRouter.post('/verify-2fa', async (req, res, next) => {
+authRouter.post('/verify-2fa', verifyTwoFactorLimiter, async (req, res, next) => {
   try {
     const payload = verifyTwoFactorSchema.parse(req.body);
     const challenge = pendingChallenges.get(payload.challengeId);

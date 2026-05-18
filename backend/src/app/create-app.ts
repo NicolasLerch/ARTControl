@@ -1,7 +1,6 @@
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import express from 'express';
-import rateLimit from 'express-rate-limit';
 import { env } from '../config/env.js';
 import { errorHandler, notFoundHandler } from '../middlewares/error-handler.js';
 import { authRouter } from '../modules/auth/router.js';
@@ -9,17 +8,6 @@ import { patientsRouter } from '../modules/patients/router.js';
 import { appointmentsRouter } from '../modules/appointments/router.js';
 import { attendancesRouter } from '../modules/attendances/router.js';
 import { requireAuth } from '../middlewares/auth.js';
-
-const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  limit: 10,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: {
-    message: 'Demasiados intentos de login',
-    code: 'RATE_LIMITED',
-  },
-});
 
 export function createApp() {
   const app = express();
@@ -37,7 +25,7 @@ export function createApp() {
     res.json({ ok: true });
   });
 
-  app.use('/auth', loginLimiter, authRouter);
+  app.use('/auth', authRouter);
   app.use('/patients', requireAuth, patientsRouter);
   app.use('/appointments', requireAuth, appointmentsRouter);
   app.use('/attendances', requireAuth, attendancesRouter);
