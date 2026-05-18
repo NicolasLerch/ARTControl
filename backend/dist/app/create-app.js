@@ -1,8 +1,6 @@
 import cookieParser from 'cookie-parser';
-import cors from 'cors';
 import express from 'express';
 import rateLimit from 'express-rate-limit';
-import { env } from '../config/env.js';
 import { errorHandler, notFoundHandler } from '../middlewares/error-handler.js';
 import { authRouter } from '../modules/auth/router.js';
 import { patientsRouter } from '../modules/patients/router.js';
@@ -21,10 +19,12 @@ const loginLimiter = rateLimit({
 });
 export function createApp() {
     const app = express();
-    app.use(cors({
-        origin: env.FRONTEND_URL,
-        credentials: true,
-    }));
+    // app.use(
+    //   cors({
+    //     origin: env.FRONTEND_URL,
+    //     credentials: true,
+    //   }),
+    // );
     app.use(express.json());
     app.use(cookieParser());
     app.get('/health', (_req, res) => {
