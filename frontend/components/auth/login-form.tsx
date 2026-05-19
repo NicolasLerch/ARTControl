@@ -1,6 +1,6 @@
 'use client'
 
-import { FormEvent, useState } from 'react'
+import { FormEvent, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ApiError, login } from '@/lib/api/client'
 import { Button } from '@/components/ui/button'
@@ -13,13 +13,26 @@ export function LoginForm() {
   const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [cooldownSeconds, setCooldownSeconds] = useState(0)
+
+  useEffect(() => {
+    if (cooldownSeconds <= 0) return
+
+    const timer = setInterval(() => {
+      setCooldownSeconds((current) => (current > 0 ? current - 1 : 0))
+    }, 1000)
+
+    return () => clearInterval(timer)
+  }, [cooldownSeconds])
 
   const handleCredentials = async (event: FormEvent) => {
     event.preventDefault()
+    if (cooldownSeconds > 0) {
+      return
+    }
+
     setLoading(true)
     setError(null)
 
@@ -28,7 +41,19 @@ export function LoginForm() {
       router.replace('/')
       router.refresh()
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'No se pudo iniciar sesión')
+      if (err instanceof ApiError) {
+        if (err.status === 429 || err.code === 'RATE_LIMITED') {
+          const retryAfter = err.retryAfterSeconds ?? 60
+          setCooldownSeconds(retryAfter)
+          setError(`Demasiados intentos de login. Reintentá en ${retryAfter}s.`)
+        } else if (err.status === 401) {
+          setError('Credenciales inválidas')
+        } else {
+          setError(err.message || 'No se pudo iniciar sesión')
+        }
+      } else {
+        setError('No se pudo iniciar sesión')
+      }
     } finally {
       setLoading(false)
     }
@@ -62,8 +87,8 @@ export function LoginForm() {
                 required
               />
             </div>
-            <Button className="w-full" disabled={loading} type="submit">
-              {loading ? 'Validando...' : 'Continuar'}
+            <Button className="w-full" disabled={loading || cooldownSeconds > 0} type="submit">
+              {loading ? 'Validando...' : cooldownSeconds > 0 ? `Reintentar en ${cooldownSeconds}s` : 'Continuar'}
             </Button>
           </form>
       </CardContent>
