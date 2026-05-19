@@ -2,7 +2,7 @@
 
 import { Appointment, AppointmentStatus, AttendanceRecord, AuthUser, Patient, PatientTimelineItem } from '@/lib/types'
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://artcontrol.fly.dev' || 'http://localhost:4000'
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'
 
 // const API_BASE_URL = 'https://artcontrol.fly.dev'
 
