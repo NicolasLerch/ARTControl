@@ -16,13 +16,43 @@ export class ApiError extends Error {
   status: number
   code?: string
   fieldErrors?: Record<string, string[] | undefined>
+  retryAfterSeconds?: number
 
-  constructor(status: number, payload: ApiErrorPayload) {
+  constructor(status: number, payload: ApiErrorPayload, retryAfterSeconds?: number) {
     super(payload.message ?? 'Request failed')
     this.status = status
     this.code = payload.code
     this.fieldErrors = payload.fieldErrors
+    this.retryAfterSeconds = retryAfterSeconds
   }
+}
+
+function parseRetryAfterSeconds(response: Response) {
+  const retryAfter = response.headers.get('retry-after')
+  if (retryAfter) {
+    const asNumber = Number(retryAfter)
+    if (!Number.isNaN(asNumber) && asNumber > 0) {
+      return Math.ceil(asNumber)
+    }
+
+    const asDate = Date.parse(retryAfter)
+    if (!Number.isNaN(asDate)) {
+      const diffSeconds = Math.ceil((asDate - Date.now()) / 1000)
+      if (diffSeconds > 0) {
+        return diffSeconds
+      }
+    }
+  }
+
+  const rateLimitReset = response.headers.get('ratelimit-reset')
+  if (rateLimitReset) {
+    const asNumber = Number(rateLimitReset)
+    if (!Number.isNaN(asNumber) && asNumber > 0) {
+      return Math.ceil(asNumber)
+    }
+  }
+
+  return undefined
 }
 
 type RequestOptions = RequestInit & {
@@ -56,7 +86,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   const data = await response.json().catch(() => ({}))
 
   if (!response.ok) {
-    throw new ApiError(response.status, data)
+    throw new ApiError(response.status, data, parseRetryAfterSeconds(response))
   }
 
   return data as T
