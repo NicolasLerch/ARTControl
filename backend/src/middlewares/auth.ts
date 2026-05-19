@@ -1,5 +1,5 @@
 import type { NextFunction, Request, Response } from 'express';
-import { SESSION_COOKIE_NAME } from '../config/cookies.js';
+import { getClearSessionCookieOptions, SESSION_COOKIE_NAME } from '../config/cookies.js';
 import { hashToken } from '../lib/crypto.js';
 import { prisma } from '../lib/prisma.js';
 
@@ -35,7 +35,7 @@ export async function requireAuth(req: AuthedRequest, res: Response, next: NextF
   });
 
   if (!session || session.expiresAt <= new Date() || !session.user.isActive) {
-    res.clearCookie(SESSION_COOKIE_NAME);
+    res.clearCookie(SESSION_COOKIE_NAME, getClearSessionCookieOptions());
     return res.status(401).json({
       message: 'Sesión inválida',
       code: 'UNAUTHORIZED',
