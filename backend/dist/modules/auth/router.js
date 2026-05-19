@@ -1,9 +1,9 @@
 import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
-import { SESSION_COOKIE_NAME, getSessionCookieOptions } from '../../config/cookies.js';
+import { SESSION_COOKIE_NAME, getClearSessionCookieOptions, getSessionCookieOptions } from '../../config/cookies.js';
 import { buildTotpEnrollment, createTotpSecret, verifyTotpToken } from '../../lib/totp.js';
 import { prisma } from '../../lib/prisma.js';
-import { hashToken, createChallengeToken, verifyChallengeToken, generateSessionToken } from '../../lib/crypto.js';
+import { hashToken, verifyChallengeToken, generateSessionToken } from '../../lib/crypto.js';
 import { loginSchema, verifyTwoFactorSchema, confirmTwoFactorSchema } from '../../schemas/auth.js';
 import { verifyPassword } from '../../lib/password.js';
 import { requireAuth } from '../../middlewares/auth.js';
@@ -74,14 +74,6 @@ authRouter.post('/login', loginLimiter, async (req, res, next) => {
                 code: 'INVALID_CREDENTIALS',
             });
         }
-        if (user.totpEnabled && user.totpSecret) {
-            const expiresAt = Date.now() + 1000 * 60 * 10;
-            const challengeId = createChallengeToken(user.id, expiresAt);
-            return res.json({
-                requires2fa: true,
-                challengeId,
-            });
-        }
         const session = await createPersistentSession(req, user.id);
         res.cookie(SESSION_COOKIE_NAME, session.token, getSessionCookieOptions(session.expiresAt));
         return res.json({
@@ -135,7 +127,7 @@ authRouter.post('/logout', requireAuth, async (req, res, next) => {
                 where: { id: req.authSessionId },
             });
         }
-        res.clearCookie(SESSION_COOKIE_NAME);
+        res.clearCookie(SESSION_COOKIE_NAME, getClearSessionCookieOptions());
         res.status(204).send();
     }
     catch (error) {

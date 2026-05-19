@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
-import { SESSION_COOKIE_NAME, getSessionCookieOptions } from '../../config/cookies.js';
+import { SESSION_COOKIE_NAME, getClearSessionCookieOptions, getSessionCookieOptions } from '../../config/cookies.js';
 import { buildTotpEnrollment, createTotpSecret, verifyTotpToken } from '../../lib/totp.js';
 import { prisma } from '../../lib/prisma.js';
 import { hashToken, createChallengeToken, verifyChallengeToken, generateSessionToken } from '../../lib/crypto.js';
@@ -149,7 +149,7 @@ authRouter.post('/logout', requireAuth, async (req: AuthedRequest, res, next) =>
       });
     }
 
-    res.clearCookie(SESSION_COOKIE_NAME);
+    res.clearCookie(SESSION_COOKIE_NAME, getClearSessionCookieOptions());
     res.status(204).send();
   } catch (error) {
     next(error);
