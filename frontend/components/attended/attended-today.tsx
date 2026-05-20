@@ -30,7 +30,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { createAttendance, deletePatient, listAppointments, listAttendances, listPatients } from '@/lib/api/client'
+import { createAppointment, deletePatient, listAppointments, listAttendances, listPatients, updateAppointmentStatus } from '@/lib/api/client'
 import { emitDataChanged, subscribeDataChanged } from '@/lib/api/events'
 import { Appointment, AttendanceRecord, Patient } from '@/lib/types'
 import { CreatePatientModal } from '@/components/patients/create-patient-modal'
