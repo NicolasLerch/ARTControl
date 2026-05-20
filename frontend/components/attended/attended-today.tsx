@@ -47,6 +47,19 @@ function currentTimeValue() {
   return format(new Date(), 'HH:mm')
 }
 
+function buildAttendanceDateTime(date: string, time?: string) {
+  if (!time) return date
+
+  const [year, month, day] = date.split('-').map(Number)
+  const [hours, minutes] = time.split(':').map(Number)
+  const localDate = new Date(year, month - 1, day, hours, minutes, 0, 0)
+  return localDate.toISOString()
+}
+
+function currentTimeValue() {
+  return format(new Date(), 'HH:mm')
+}
+
 interface RegisterAttendedPatientModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -98,6 +111,8 @@ function RegisterAttendedPatientModal({ open, onOpenChange, selectedDate }: Regi
   const handleOpenChange = (nextOpen: boolean) => {
     if (!nextOpen) {
       resetForm()
+    } else {
+      setFormData((prev) => ({ ...prev, hora: currentTimeValue() }))
     }
     onOpenChange(nextOpen)
   }
@@ -116,7 +131,7 @@ function RegisterAttendedPatientModal({ open, onOpenChange, selectedDate }: Regi
     try {
       await createAttendance({
         patientId: selectedPatient.id,
-        fechaAtencion: formData.hora ? `${selectedDate}T${formData.hora}:00` : selectedDate,
+        fechaAtencion: buildAttendanceDateTime(selectedDate, formData.hora),
         observaciones: formData.observaciones,
       })
       emitDataChanged()
