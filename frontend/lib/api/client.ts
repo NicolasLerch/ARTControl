@@ -345,3 +345,11 @@ export async function listTodayAttendances() {
   const data = await request<{ items: Array<Parameters<typeof mapAttendance>[0]> }>('/attendances/today')
   return data.items.map(mapAttendance)
 }
+
+export async function listAttendances(params: { date?: string; today?: boolean; patientId?: string } = {}) {
+  const data = await request<{ items: Array<Parameters<typeof mapAttendance>[0]> }>('/attendances', {
+    query: params,
+  })
+
+  return data.items.map(mapAttendance)
+}
