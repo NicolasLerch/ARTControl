@@ -2,6 +2,17 @@ import { Router } from 'express';
 import { prisma } from '../../lib/prisma.js';
 import { patientCreateSchema, patientQuerySchema, patientUpdateSchema } from '../../schemas/patients.js';
 import { toTimelineDateTime } from '../../lib/dates.js';
+import { Prisma } from '@prisma/client';
+
+function toNameCase(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+}
 
 function serializePatient(patient: {
   id: string;
@@ -23,15 +34,15 @@ export const patientsRouter = Router();
 patientsRouter.get('/', async (req, res, next) => {
   try {
     const query = patientQuerySchema.parse(req.query);
-    const where = {
+    const where: Prisma.PatientWhereInput = {
       AND: [
         query.dni ? { dni: { contains: query.dni } } : {},
-        query.apellido ? { apellido: { contains: query.apellido } } : {},
+        query.apellido ? { apellido: { contains: query.apellido, mode: Prisma.QueryMode.insensitive } } : {},
         query.q
           ? {
               OR: [
-                { nombre: { contains: query.q } },
-                { apellido: { contains: query.q } },
+                { nombre: { contains: query.q, mode: Prisma.QueryMode.insensitive } },
+                { apellido: { contains: query.q, mode: Prisma.QueryMode.insensitive } },
                 { dni: { contains: query.q } },
               ],
             }
@@ -66,6 +77,8 @@ patientsRouter.post('/', async (req, res, next) => {
     const patient = await prisma.patient.create({
       data: {
         ...payload,
+        nombre: toNameCase(payload.nombre),
+        apellido: toNameCase(payload.apellido),
         dni: payload.dni.trim(),
       },
     });
@@ -131,7 +144,11 @@ patientsRouter.patch('/:id', async (req, res, next) => {
     const payload = patientUpdateSchema.parse(req.body);
     const patient = await prisma.patient.update({
       where: { id: req.params.id },
-      data: payload,
+      data: {
+        ...payload,
+        ...(payload.nombre ? { nombre: toNameCase(payload.nombre) } : {}),
+        ...(payload.apellido ? { apellido: toNameCase(payload.apellido) } : {}),
+      },
     });
 
     res.json({

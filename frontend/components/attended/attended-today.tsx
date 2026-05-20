@@ -38,10 +38,6 @@ import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { Clock, MoreVertical, Pencil, Search, Trash2, User, UserCheck, UserPlus } from 'lucide-react'
 
-function currentTimeValue() {
-  return format(new Date(), 'HH:mm')
-}
-
 function parseLocalDate(dateString: string) {
   const [year, month, day] = dateString.split('-').map(Number)
   return new Date(year, month - 1, day)
@@ -60,7 +56,6 @@ function RegisterAttendedPatientModal({ open, onOpenChange, selectedDate }: Regi
   const [showCreatePatient, setShowCreatePatient] = useState(false)
   const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState({
-    hora: currentTimeValue(),
     observaciones: '',
   })
 
@@ -92,7 +87,6 @@ function RegisterAttendedPatientModal({ open, onOpenChange, selectedDate }: Regi
     setSearchResults([])
     setSelectedPatient(null)
     setFormData({
-      hora: currentTimeValue(),
       observaciones: '',
     })
   }
@@ -116,14 +110,11 @@ function RegisterAttendedPatientModal({ open, onOpenChange, selectedDate }: Regi
 
     setLoading(true)
     try {
-      const appointment = await createAppointment({
+      await createAttendance({
         patientId: selectedPatient.id,
-        fecha: selectedDate,
-        hora: formData.hora,
+        fechaAtencion: selectedDate,
         observaciones: formData.observaciones,
       })
-
-      await updateAppointmentStatus(appointment.id, 'asistio')
       emitDataChanged()
       handleOpenChange(false)
     } finally {
@@ -245,21 +236,9 @@ function RegisterAttendedPatientModal({ open, onOpenChange, selectedDate }: Regi
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="hora">Hora *</Label>
-                  <Input
-                    id="hora"
-                    type="time"
-                    value={formData.hora}
-                    onChange={(event) => setFormData((prev) => ({ ...prev, hora: event.target.value }))}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Fecha</Label>
-                  <Input value={selectedDate} disabled readOnly type="date" />
-                </div>
+              <div className="space-y-2">
+                <Label>Fecha</Label>
+                <Input value={selectedDate} disabled readOnly type="date" />
               </div>
 
               <div className="space-y-2">
