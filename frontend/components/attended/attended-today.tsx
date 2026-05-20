@@ -116,7 +116,7 @@ function RegisterAttendedPatientModal({ open, onOpenChange, selectedDate }: Regi
     try {
       await createAttendance({
         patientId: selectedPatient.id,
-        fechaAtencion: `${selectedDate}T${formData.hora}:00`,
+        fechaAtencion: formData.hora ? `${selectedDate}T${formData.hora}:00` : selectedDate,
         observaciones: formData.observaciones,
       })
       emitDataChanged()
@@ -129,7 +129,7 @@ function RegisterAttendedPatientModal({ open, onOpenChange, selectedDate }: Regi
   return (
     <>
       <Dialog open={open} onOpenChange={handleOpenChange}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Agregar paciente atendido</DialogTitle>
             <DialogDescription>
@@ -139,6 +139,22 @@ function RegisterAttendedPatientModal({ open, onOpenChange, selectedDate }: Regi
 
           <form onSubmit={handleSubmit}>
             <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="hora">Hora *</Label>
+                  <Input
+                    id="hora"
+                    type="time"
+                    value={formData.hora}
+                    onChange={(event) => setFormData((prev) => ({ ...prev, hora: event.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Fecha</Label>
+                  <Input value={selectedDate} disabled readOnly type="date" />
+                </div>
+              </div>
+
               {!selectedPatient ? (
                 <div className="space-y-3">
                   <Label>Paciente *</Label>
@@ -239,11 +255,6 @@ function RegisterAttendedPatientModal({ open, onOpenChange, selectedDate }: Regi
                   </div>
                 </div>
               )}
-
-              <div className="space-y-2">
-                <Label>Fecha</Label>
-                <Input value={selectedDate} disabled readOnly type="date" />
-              </div>
 
               <div className="space-y-2">
                 <Label htmlFor="observaciones">Observaciones</Label>

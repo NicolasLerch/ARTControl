@@ -1,10 +1,12 @@
 import { z } from 'zod';
 import { cuidSchema, dateStringSchema } from './common.js';
 
-const attendanceDateTimeSchema = z.string().regex(
-  /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2}(\.\d{3})?)?)?$/,
-  'Fecha de atención inválida',
-);
+const attendanceDateTimeSchema = z.string().trim().refine((value) => {
+  if (!value) return false;
+
+  const parsed = new Date(value);
+  return !Number.isNaN(parsed.getTime());
+}, 'Fecha de atención inválida');
 
 export const attendanceCreateSchema = z.object({
   patientId: cuidSchema,
