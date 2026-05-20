@@ -60,7 +60,6 @@ function RegisterAttendedPatientModal({ open, onOpenChange, selectedDate }: Regi
   const [showCreatePatient, setShowCreatePatient] = useState(false)
   const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState({
-    hora: currentTimeValue(),
     observaciones: '',
   })
 
@@ -92,7 +91,6 @@ function RegisterAttendedPatientModal({ open, onOpenChange, selectedDate }: Regi
     setSearchResults([])
     setSelectedPatient(null)
     setFormData({
-      hora: currentTimeValue(),
       observaciones: '',
     })
   }
