@@ -60,7 +60,6 @@ function RegisterAttendedPatientModal({ open, onOpenChange, selectedDate }: Regi
   const [showCreatePatient, setShowCreatePatient] = useState(false)
   const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState({
-    hora: currentTimeValue(),
     observaciones: '',
   })
 
@@ -92,7 +91,6 @@ function RegisterAttendedPatientModal({ open, onOpenChange, selectedDate }: Regi
     setSearchResults([])
     setSelectedPatient(null)
     setFormData({
-      hora: currentTimeValue(),
       observaciones: '',
     })
   }
@@ -242,21 +240,9 @@ function RegisterAttendedPatientModal({ open, onOpenChange, selectedDate }: Regi
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="hora">Hora *</Label>
-                  <Input
-                    id="hora"
-                    type="time"
-                    value={formData.hora}
-                    onChange={(event) => setFormData((prev) => ({ ...prev, hora: event.target.value }))}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Fecha</Label>
-                  <Input value={selectedDate} disabled readOnly type="date" />
-                </div>
+              <div className="space-y-2">
+                <Label>Fecha</Label>
+                <Input value={selectedDate} disabled readOnly type="date" />
               </div>
 
               <div className="space-y-2">
