@@ -56,10 +56,6 @@ function buildAttendanceDateTime(date: string, time?: string) {
   return localDate.toISOString()
 }
 
-function currentTimeValue() {
-  return format(new Date(), 'HH:mm')
-}
-
 interface RegisterAttendedPatientModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
