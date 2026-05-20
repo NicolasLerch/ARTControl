@@ -56,6 +56,10 @@ function buildAttendanceDateTime(date: string, time?: string) {
   return localDate.toISOString()
 }
 
+function currentTimeValue() {
+  return format(new Date(), 'HH:mm')
+}
+
 interface RegisterAttendedPatientModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -69,7 +73,6 @@ function RegisterAttendedPatientModal({ open, onOpenChange, selectedDate }: Regi
   const [showCreatePatient, setShowCreatePatient] = useState(false)
   const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState({
-    hora: currentTimeValue(),
     observaciones: '',
   })
 
@@ -101,7 +104,6 @@ function RegisterAttendedPatientModal({ open, onOpenChange, selectedDate }: Regi
     setSearchResults([])
     setSelectedPatient(null)
     setFormData({
-      hora: currentTimeValue(),
       observaciones: '',
     })
   }
