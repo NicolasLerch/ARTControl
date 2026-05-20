@@ -70,6 +70,7 @@ function RegisterAttendedPatientModal({ open, onOpenChange, selectedDate }: Regi
   const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState({
     observaciones: '',
+    hora: currentTimeValue(),
   })
 
   useEffect(() => {
@@ -101,6 +102,7 @@ function RegisterAttendedPatientModal({ open, onOpenChange, selectedDate }: Regi
     setSelectedPatient(null)
     setFormData({
       observaciones: '',
+      hora: currentTimeValue(),
     })
   }
 
@@ -149,23 +151,6 @@ function RegisterAttendedPatientModal({ open, onOpenChange, selectedDate }: Regi
           </DialogHeader>
 
           <form onSubmit={handleSubmit}>
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="hora">Hora *</Label>
-                  <Input
-                    id="hora"
-                    type="time"
-                    value={formData.hora}
-                    onChange={(event) => setFormData((prev) => ({ ...prev, hora: event.target.value }))}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Fecha</Label>
-                  <Input value={selectedDate} disabled readOnly type="date" />
-                </div>
-              </div>
-
               {!selectedPatient ? (
                 <div className="space-y-3">
                   <Label>Paciente *</Label>
@@ -266,6 +251,23 @@ function RegisterAttendedPatientModal({ open, onOpenChange, selectedDate }: Regi
                   </div>
                 </div>
               )}
+
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="hora">Hora *</Label>
+                  <Input
+                    id="hora"
+                    type="time"
+                    value={formData.hora}
+                    onChange={(event) => setFormData((prev) => ({ ...prev, hora: event.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Fecha</Label>
+                  <Input value={selectedDate} disabled readOnly type="date" />
+                </div>
+              </div>
 
               <div className="space-y-2">
                 <Label htmlFor="observaciones">Observaciones</Label>
