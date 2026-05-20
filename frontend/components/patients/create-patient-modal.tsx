@@ -95,22 +95,22 @@ export function CreatePatientModal({
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="nombre">Nombre *</Label>
-                <Input
-                  id="nombre"
-                  value={formData.nombre}
-                  onChange={(e) => updateField('nombre', e.target.value)}
-                  placeholder="Nombre"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
                 <Label htmlFor="apellido">Apellido *</Label>
                 <Input
                   id="apellido"
                   value={formData.apellido}
                   onChange={(e) => updateField('apellido', e.target.value)}
                   placeholder="Apellido"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="nombre">Nombre *</Label>
+                <Input
+                  id="nombre"
+                  value={formData.nombre}
+                  onChange={(e) => updateField('nombre', e.target.value)}
+                  placeholder="Nombre"
                   required
                 />
               </div>
