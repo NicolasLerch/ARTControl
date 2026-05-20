@@ -353,3 +353,17 @@ export async function listAttendances(params: { date?: string; today?: boolean; 
 
   return data.items.map(mapAttendance)
 }
+
+export async function createAttendance(payload: {
+  patientId: string
+  fechaAtencion: string
+  observaciones?: string
+  appointmentId?: string | null
+}) {
+  const data = await request<{ attendance: Parameters<typeof mapAttendance>[0] }>('/attendances', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+
+  return mapAttendance(data.attendance)
+}
