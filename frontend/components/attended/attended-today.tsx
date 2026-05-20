@@ -43,6 +43,10 @@ function parseLocalDate(dateString: string) {
   return new Date(year, month - 1, day)
 }
 
+function currentTimeValue() {
+  return format(new Date(), 'HH:mm')
+}
+
 interface RegisterAttendedPatientModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -112,7 +116,7 @@ function RegisterAttendedPatientModal({ open, onOpenChange, selectedDate }: Regi
     try {
       await createAttendance({
         patientId: selectedPatient.id,
-        fechaAtencion: selectedDate,
+        fechaAtencion: `${selectedDate}T${formData.hora}:00`,
         observaciones: formData.observaciones,
       })
       emitDataChanged()
