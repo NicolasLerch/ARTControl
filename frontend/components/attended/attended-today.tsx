@@ -30,21 +30,21 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { createAppointment, deletePatient, listAppointments, listPatients, updateAppointmentStatus } from '@/lib/api/client'
+import { createAttendance, deletePatient, listAppointments, listAttendances, listPatients } from '@/lib/api/client'
 import { emitDataChanged, subscribeDataChanged } from '@/lib/api/events'
-import { Appointment, Patient } from '@/lib/types'
+import { Appointment, AttendanceRecord, Patient } from '@/lib/types'
 import { CreatePatientModal } from '@/components/patients/create-patient-modal'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { Clock, MoreVertical, Pencil, Search, Trash2, User, UserCheck, UserPlus } from 'lucide-react'
 
-function currentTimeValue() {
-  return format(new Date(), 'HH:mm')
-}
-
 function parseLocalDate(dateString: string) {
   const [year, month, day] = dateString.split('-').map(Number)
   return new Date(year, month - 1, day)
+}
+
+function currentTimeValue() {
+  return format(new Date(), 'HH:mm')
 }
 
 interface RegisterAttendedPatientModalProps {
@@ -116,14 +116,11 @@ function RegisterAttendedPatientModal({ open, onOpenChange, selectedDate }: Regi
 
     setLoading(true)
     try {
-      const appointment = await createAppointment({
+      await createAttendance({
         patientId: selectedPatient.id,
-        fecha: selectedDate,
-        hora: formData.hora,
+        fechaAtencion: formData.hora ? `${selectedDate}T${formData.hora}:00` : selectedDate,
         observaciones: formData.observaciones,
       })
-
-      await updateAppointmentStatus(appointment.id, 'asistio')
       emitDataChanged()
       handleOpenChange(false)
     } finally {
@@ -134,7 +131,7 @@ function RegisterAttendedPatientModal({ open, onOpenChange, selectedDate }: Regi
   return (
     <>
       <Dialog open={open} onOpenChange={handleOpenChange}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Agregar paciente atendido</DialogTitle>
             <DialogDescription>
@@ -144,6 +141,22 @@ function RegisterAttendedPatientModal({ open, onOpenChange, selectedDate }: Regi
 
           <form onSubmit={handleSubmit}>
             <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="hora">Hora *</Label>
+                  <Input
+                    id="hora"
+                    type="time"
+                    value={formData.hora}
+                    onChange={(event) => setFormData((prev) => ({ ...prev, hora: event.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Fecha</Label>
+                  <Input value={selectedDate} disabled readOnly type="date" />
+                </div>
+              </div>
+
               {!selectedPatient ? (
                 <div className="space-y-3">
                   <Label>Paciente *</Label>
@@ -245,23 +258,6 @@ function RegisterAttendedPatientModal({ open, onOpenChange, selectedDate }: Regi
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="hora">Hora *</Label>
-                  <Input
-                    id="hora"
-                    type="time"
-                    value={formData.hora}
-                    onChange={(event) => setFormData((prev) => ({ ...prev, hora: event.target.value }))}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Fecha</Label>
-                  <Input value={selectedDate} disabled readOnly type="date" />
-                </div>
-              </div>
-
               <div className="space-y-2">
                 <Label htmlFor="observaciones">Observaciones</Label>
                 <Textarea
@@ -298,6 +294,7 @@ function RegisterAttendedPatientModal({ open, onOpenChange, selectedDate }: Regi
 
 export function AttendedToday() {
   const [appointments, setAppointments] = useState<Appointment[]>([])
+  const [manualAttendances, setManualAttendances] = useState<AttendanceRecord[]>([])
   const [showPatientModal, setShowPatientModal] = useState(false)
   const [editingPatient, setEditingPatient] = useState<Patient | null>(null)
   const [showRegisterAttended, setShowRegisterAttended] = useState(false)
@@ -307,12 +304,18 @@ export function AttendedToday() {
     let active = true
 
     const load = async () => {
-      const items = await listAppointments({
-        date: selectedDate,
-      })
+      const [appointmentItems, attendanceItems] = await Promise.all([
+        listAppointments({
+          date: selectedDate,
+        }),
+        listAttendances({
+          date: selectedDate,
+        }),
+      ])
 
       if (active) {
-        setAppointments(items)
+        setAppointments(appointmentItems)
+        setManualAttendances(attendanceItems)
       }
     }
 
@@ -326,6 +329,25 @@ export function AttendedToday() {
   }, [selectedDate])
 
   const attendedAppointments = appointments.filter((appointment) => appointment.estado === 'asistio')
+  const manualOnlyAttendances = manualAttendances.filter((attendance) => !attendance.appointmentId)
+  const attendedRows = [
+    ...attendedAppointments.map((appointment) => ({
+      key: `appt-${appointment.id}`,
+      hora: appointment.hora,
+      observaciones: appointment.observaciones,
+      patient: appointment.patient,
+    })),
+    ...manualOnlyAttendances.map((attendance) => ({
+      key: `attendance-${attendance.id}`,
+      hora: new Date(attendance.fechaAtencion ?? '').toLocaleTimeString('es-AR', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      }),
+      observaciones: attendance.observaciones,
+      patient: attendance.patient,
+    })),
+  ].sort((a, b) => a.hora.localeCompare(b.hora))
 
   const handleEditPatient = (patient: Patient) => {
     setEditingPatient(patient)
@@ -363,7 +385,7 @@ export function AttendedToday() {
               />
               <Badge variant="secondary" className="bg-success/20 text-success">
                 <UserCheck className="mr-1 h-3 w-3" />
-                {attendedAppointments.length} pacientes
+                {attendedRows.length} pacientes
               </Badge>
               <Button onClick={() => setShowRegisterAttended(true)}>
                 <UserPlus className="mr-2 h-4 w-4" />
@@ -374,7 +396,7 @@ export function AttendedToday() {
         </CardHeader>
 
         <CardContent>
-          {attendedAppointments.length === 0 ? (
+          {attendedRows.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <div className="rounded-full bg-muted p-3">
                 <UserCheck className="h-6 w-6 text-muted-foreground" />
@@ -396,25 +418,25 @@ export function AttendedToday() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {attendedAppointments.map((appointment) => (
-                    <TableRow key={appointment.id}>
+                  {attendedRows.map((row) => (
+                    <TableRow key={row.key}>
                       <TableCell className="font-mono text-sm">
                         <div className="flex items-center gap-1.5">
                           <Clock className="h-3 w-3 text-muted-foreground" />
-                          {appointment.hora}
+                          {row.hora}
                         </div>
                       </TableCell>
                       <TableCell className="font-medium">
-                        {appointment.patient?.apellido}, {appointment.patient?.nombre}
+                        {row.patient?.apellido}, {row.patient?.nombre}
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {appointment.patient?.dni}
+                        {row.patient?.dni}
                       </TableCell>
                       <TableCell className="max-w-[260px] truncate text-sm text-muted-foreground">
-                        {appointment.observaciones || '-'}
+                        {row.observaciones || '-'}
                       </TableCell>
                       <TableCell>
-                        {appointment.patient ? (
+                        {row.patient ? (
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -422,13 +444,13 @@ export function AttendedToday() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => handleEditPatient(appointment.patient!)}>
+                              <DropdownMenuItem onClick={() => handleEditPatient(row.patient!)}>
                                 <Pencil className="mr-2 h-4 w-4" />
                                 Editar paciente
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 className="text-destructive focus:text-destructive"
-                                onClick={() => handleDeletePatient(appointment.patient!)}
+                                onClick={() => handleDeletePatient(row.patient!)}
                               >
                                 <Trash2 className="mr-2 h-4 w-4" />
                                 Eliminar paciente
@@ -450,7 +472,7 @@ export function AttendedToday() {
               <p className="text-xs text-muted-foreground">Total turnos</p>
             </div>
             <div className="rounded-lg border border-success/30 bg-success/10 p-4 text-center">
-              <p className="text-2xl font-bold text-success">{attendedAppointments.length}</p>
+              <p className="text-2xl font-bold text-success">{attendedRows.length}</p>
               <p className="text-xs text-muted-foreground">Atendidos</p>
             </div>
             <div className="rounded-lg border border-warning/30 bg-warning/10 p-4 text-center">
