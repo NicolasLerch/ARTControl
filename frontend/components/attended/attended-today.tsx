@@ -56,6 +56,21 @@ function buildAttendanceDateTime(date: string, time?: string) {
   return localDate.toISOString()
 }
 
+function ensurePatient(patient?: Appointment['patient'] | AttendanceRecord['patient']): Patient | undefined {
+  if (!patient) {
+    return undefined
+  }
+
+  return {
+    id: patient.id,
+    nombre: patient.nombre,
+    apellido: patient.apellido,
+    dni: patient.dni,
+    createdAt: 'createdAt' in patient ? (patient.createdAt ?? '') : '',
+    updatedAt: 'updatedAt' in patient ? patient.updatedAt : undefined,
+  }
+}
+
 interface RegisterAttendedPatientModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -70,6 +85,7 @@ function RegisterAttendedPatientModal({ open, onOpenChange, selectedDate }: Regi
   const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState({
     observaciones: '',
+    hora: currentTimeValue(),
   })
 
   useEffect(() => {
@@ -101,6 +117,7 @@ function RegisterAttendedPatientModal({ open, onOpenChange, selectedDate }: Regi
     setSelectedPatient(null)
     setFormData({
       observaciones: '',
+      hora: currentTimeValue(),
     })
   }
 
@@ -149,23 +166,6 @@ function RegisterAttendedPatientModal({ open, onOpenChange, selectedDate }: Regi
           </DialogHeader>
 
           <form onSubmit={handleSubmit}>
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="hora">Hora *</Label>
-                  <Input
-                    id="hora"
-                    type="time"
-                    value={formData.hora}
-                    onChange={(event) => setFormData((prev) => ({ ...prev, hora: event.target.value }))}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Fecha</Label>
-                  <Input value={selectedDate} disabled readOnly type="date" />
-                </div>
-              </div>
-
               {!selectedPatient ? (
                 <div className="space-y-3">
                   <Label>Paciente *</Label>
@@ -267,6 +267,23 @@ function RegisterAttendedPatientModal({ open, onOpenChange, selectedDate }: Regi
                 </div>
               )}
 
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="hora">Hora *</Label>
+                  <Input
+                    id="hora"
+                    type="time"
+                    value={formData.hora}
+                    onChange={(event) => setFormData((prev) => ({ ...prev, hora: event.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Fecha</Label>
+                  <Input value={selectedDate} disabled readOnly type="date" />
+                </div>
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="observaciones">Observaciones</Label>
                 <Textarea
@@ -344,7 +361,7 @@ export function AttendedToday() {
       key: `appt-${appointment.id}`,
       hora: appointment.hora,
       observaciones: appointment.observaciones,
-      patient: appointment.patient,
+      patient: ensurePatient(appointment.patient),
     })),
     ...manualOnlyAttendances.map((attendance) => ({
       key: `attendance-${attendance.id}`,
@@ -354,7 +371,7 @@ export function AttendedToday() {
         hour12: false,
       }),
       observaciones: attendance.observaciones,
-      patient: attendance.patient,
+      patient: ensurePatient(attendance.patient),
     })),
   ].sort((a, b) => a.hora.localeCompare(b.hora))
 
