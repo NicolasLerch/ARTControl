@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import {
   Table,
   TableBody,
@@ -16,7 +17,7 @@ import { Spinner } from '@/components/ui/spinner'
 import { listMedications, ApiError } from '@/lib/api/client'
 import { subscribeDataChanged } from '@/lib/api/events'
 import { Medication } from '@/lib/types'
-import { Search, Pill, Building, FlaskConical } from 'lucide-react'
+import { Search, Pill, Building, FlaskConical, Copy } from 'lucide-react'
 
 export function Vademecum() {
   const [searchQuery, setSearchQuery] = useState('')
@@ -24,6 +25,18 @@ export function Vademecum() {
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  const handleCopyRecipe = async (medication: Medication) => {
+    const recipeText = `${medication.droga} ${medication.dosis} ${medication.nombreComercial} ${medication.presentacion}`
+      .replace(/\s+/g, ' ')
+      .trim()
+
+    try {
+      await navigator.clipboard.writeText(recipeText)
+    } catch {
+      // no-op: no interrumpir la UX si el navegador bloquea el portapapeles
+    }
+  }
 
   useEffect(() => {
     let active = true
@@ -134,6 +147,7 @@ export function Vademecum() {
                   <TableHead>Dosis</TableHead>
                   <TableHead>Laboratorio</TableHead>
                   <TableHead>Presentación</TableHead>
+                  <TableHead className="w-12 text-right" />
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -161,6 +175,17 @@ export function Vademecum() {
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {med.presentacion}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-label={`Copiar receta de ${med.nombreComercial}`}
+                        title="Copiar receta"
+                        onClick={() => void handleCopyRecipe(med)}
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}
