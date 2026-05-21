@@ -56,6 +56,21 @@ function buildAttendanceDateTime(date: string, time?: string) {
   return localDate.toISOString()
 }
 
+function ensurePatient(patient?: Appointment['patient'] | AttendanceRecord['patient']): Patient | undefined {
+  if (!patient) {
+    return undefined
+  }
+
+  return {
+    id: patient.id,
+    nombre: patient.nombre,
+    apellido: patient.apellido,
+    dni: patient.dni,
+    createdAt: 'createdAt' in patient ? (patient.createdAt ?? '') : '',
+    updatedAt: 'updatedAt' in patient ? patient.updatedAt : undefined,
+  }
+}
+
 interface RegisterAttendedPatientModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -346,7 +361,7 @@ export function AttendedToday() {
       key: `appt-${appointment.id}`,
       hora: appointment.hora,
       observaciones: appointment.observaciones,
-      patient: appointment.patient,
+      patient: ensurePatient(appointment.patient),
     })),
     ...manualOnlyAttendances.map((attendance) => ({
       key: `attendance-${attendance.id}`,
@@ -356,7 +371,7 @@ export function AttendedToday() {
         hour12: false,
       }),
       observaciones: attendance.observaciones,
-      patient: attendance.patient,
+      patient: ensurePatient(attendance.patient),
     })),
   ].sort((a, b) => a.hora.localeCompare(b.hora))
 
