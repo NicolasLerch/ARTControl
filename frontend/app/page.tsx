@@ -9,6 +9,7 @@ import { CreateAppointmentModal } from '@/components/appointments/create-appoint
 import { PatientsList } from '@/components/patients/patients-list'
 import { AttendedToday } from '@/components/attended/attended-today'
 import { ComingSoonPanel } from '@/components/shared/coming-soon-panel'
+import { Vademecum } from '@/components/vademecum/vademecum'
 import { TwoFactorSetupCard } from '@/components/auth/two-factor-setup-card'
 import { useAuthSession } from '@/lib/hooks/use-auth-session'
 import { logout } from '@/lib/api/client'
@@ -44,7 +45,7 @@ export default function HomePage() {
       case 'atendidos':
         return <AttendedToday />
       case 'vademecum':
-        return <ComingSoonPanel title="Vademécum" description="Esta pestaña queda en standby para una etapa posterior del producto." />
+        return <Vademecum />
       case 'farmacias':
         return <ComingSoonPanel title="Farmacias" description="La integración operativa de farmacias queda fuera del MVP y se retomará más adelante." />
       case 'especialistas':
