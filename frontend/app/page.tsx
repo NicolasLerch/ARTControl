@@ -21,7 +21,6 @@ export default function HomePage() {
   const [activeTab, setActiveTab] = useState('turnos')
   const [showAddAppointment, setShowAddAppointment] = useState(false)
   const [appointmentDefaultDate, setAppointmentDefaultDate] = useState(() => format(new Date(), 'yyyy-MM-dd'))
-  const currentUserRole = user?.role ?? 'USER'
 
   const handleLogout = async () => {
     await logout()
@@ -46,7 +45,7 @@ export default function HomePage() {
       case 'atendidos':
         return <AttendedToday />
       case 'vademecum':
-        return <Vademecum userRole={currentUserRole} />
+        return <Vademecum />
       case 'farmacias':
         return <ComingSoonPanel title="Farmacias" description="La integración operativa de farmacias queda fuera del MVP y se retomará más adelante." />
       case 'especialistas':
