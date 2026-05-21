@@ -37,18 +37,6 @@ export function Vademecum({ userRole }: { userRole: UserRole }) {
   const [saving, setSaving] = useState(false)
   const [form, setForm] = useState({ droga: '', nombreComercial: '', dosis: '', laboratorio: '', presentacion: '', indicaciones: '' })
 
-  const handleCopyRecipe = async (medication: Medication) => {
-    const recipeText = `${medication.droga} ${medication.dosis} ${medication.nombreComercial} ${medication.presentacion}`
-      .replace(/\s+/g, ' ')
-      .trim()
-
-    try {
-      await navigator.clipboard.writeText(recipeText)
-    } catch {
-      // no-op: no interrumpir la UX si el navegador bloquea el portapapeles
-    }
-  }
-
   const resetForm = () => setForm({ droga: '', nombreComercial: '', dosis: '', laboratorio: '', presentacion: '', indicaciones: '' })
   const isAdmin = userRole === 'ADMIN'
   const openCreateModal = () => { setEditingMedication(null); resetForm(); setIsModalOpen(true) }
