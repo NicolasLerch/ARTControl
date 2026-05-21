@@ -5,11 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
 import {
   Table,
   TableBody,
@@ -19,62 +14,17 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Spinner } from '@/components/ui/spinner'
-import { listMedications, ApiError, createMedication, updateMedication, deleteMedication } from '@/lib/api/client'
+import { listMedications, ApiError } from '@/lib/api/client'
 import { subscribeDataChanged } from '@/lib/api/events'
-import { Medication, UserRole } from '@/lib/types'
-import { Search, Pill, Building, FlaskConical, Copy, Plus, MoreVertical, Pencil, Trash2 } from 'lucide-react'
+import { Medication } from '@/lib/types'
+import { Search, Pill, Building, FlaskConical, Copy } from 'lucide-react'
 
-export function Vademecum({ userRole }: { userRole: UserRole }) {
+export function Vademecum() {
   const [searchQuery, setSearchQuery] = useState('')
   const [medications, setMedications] = useState<Medication[]>([])
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [isModalOpen, setIsModalOpen] = useState(false)
-  const [isDeleteOpen, setIsDeleteOpen] = useState(false)
-  const [editingMedication, setEditingMedication] = useState<Medication | null>(null)
-  const [deletingMedication, setDeletingMedication] = useState<Medication | null>(null)
-  const [saving, setSaving] = useState(false)
-  const [form, setForm] = useState({ droga: '', nombreComercial: '', dosis: '', laboratorio: '', presentacion: '', indicaciones: '' })
-
-  const handleCopyRecipe = async (medication: Medication) => {
-    const recipeText = `${medication.droga} ${medication.dosis} ${medication.nombreComercial} ${medication.presentacion}`
-      .replace(/\s+/g, ' ')
-      .trim()
-
-    try {
-      await navigator.clipboard.writeText(recipeText)
-    } catch {
-      // no-op: no interrumpir la UX si el navegador bloquea el portapapeles
-    }
-  }
-
-  const resetForm = () => setForm({ droga: '', nombreComercial: '', dosis: '', laboratorio: '', presentacion: '', indicaciones: '' })
-  const isAdmin = userRole === 'ADMIN'
-  const openCreateModal = () => { setEditingMedication(null); resetForm(); setIsModalOpen(true) }
-  const openEditModal = (med: Medication) => { setEditingMedication(med); setForm(med); setIsModalOpen(true) }
-  const handleSaveMedication = async () => {
-    if (!isAdmin || !form.nombreComercial.trim()) return
-    setSaving(true)
-    try {
-      const payload = { drug: form.droga, commercialName: form.nombreComercial, dose: form.dosis, lab: form.laboratorio, presentation: form.presentacion, description: form.indicaciones }
-      if (editingMedication) await updateMedication(editingMedication.id, payload)
-      else await createMedication(payload)
-      setIsModalOpen(false)
-      resetForm()
-      window.dispatchEvent(new CustomEvent('artcontrol:data-changed'))
-    } finally { setSaving(false) }
-  }
-  const handleDeleteMedication = async () => {
-    if (!isAdmin || !deletingMedication) return
-    setSaving(true)
-    try {
-      await deleteMedication(deletingMedication.id)
-      setIsDeleteOpen(false)
-      setDeletingMedication(null)
-      window.dispatchEvent(new CustomEvent('artcontrol:data-changed'))
-    } finally { setSaving(false) }
-  }
 
   const handleCopyRecipe = async (medication: Medication) => {
     const recipeText = `${medication.droga} ${medication.dosis} ${medication.nombreComercial} ${medication.presentacion}`
@@ -151,14 +101,6 @@ export function Vademecum({ userRole }: { userRole: UserRole }) {
             {loading ? 'Cargando...' : `${total} medicamentos`}
           </Badge>
         </div>
-        {isAdmin && (
-          <div className="mt-3">
-            <Button onClick={openCreateModal}>
-              <Plus className="h-4 w-4" />
-              Nuevo medicamento
-            </Button>
-          </div>
-        )}
         <div className="relative mt-3">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -205,7 +147,7 @@ export function Vademecum({ userRole }: { userRole: UserRole }) {
                   <TableHead>Dosis</TableHead>
                   <TableHead>Laboratorio</TableHead>
                   <TableHead>Presentación</TableHead>
-                  <TableHead className="w-24 text-right" />
+                  <TableHead className="w-12 text-right" />
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -235,28 +177,15 @@ export function Vademecum({ userRole }: { userRole: UserRole }) {
                       {med.presentacion}
                     </TableCell>
                     <TableCell className="text-right">
-                      <div className="flex justify-end gap-1">
-                        <Button variant="ghost" size="icon-sm" aria-label={`Copiar receta de ${med.nombreComercial}`} title="Copiar receta" onClick={() => void handleCopyRecipe(med)}>
-                          <Copy className="h-4 w-4" />
-                        </Button>
-                        {isAdmin && (
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon-sm" aria-label={`Opciones de ${med.nombreComercial}`}>
-                                <MoreVertical className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => openEditModal(med)}>
-                                <Pencil className="h-4 w-4" /> Editar
-                              </DropdownMenuItem>
-                              <DropdownMenuItem variant="destructive" onClick={() => { setDeletingMedication(med); setIsDeleteOpen(true) }}>
-                                <Trash2 className="h-4 w-4" /> Eliminar
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        )}
-                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-label={`Copiar receta de ${med.nombreComercial}`}
+                        title="Copiar receta"
+                        onClick={() => void handleCopyRecipe(med)}
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -274,42 +203,6 @@ export function Vademecum({ userRole }: { userRole: UserRole }) {
           </p>
         </div>
       </CardContent>
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="sm:max-w-[560px]">
-          <DialogHeader>
-            <DialogTitle>{editingMedication ? 'Editar medicamento' : 'Nuevo medicamento'}</DialogTitle>
-            <DialogDescription>Completá los datos para guardar en el vademécum.</DialogDescription>
-          </DialogHeader>
-          <div className="grid grid-cols-2 gap-3">
-            <div><Label>Droga</Label><Input value={form.droga} onChange={(e) => setForm((s) => ({ ...s, droga: e.target.value }))} /></div>
-            <div><Label>Nombre comercial *</Label><Input value={form.nombreComercial} onChange={(e) => setForm((s) => ({ ...s, nombreComercial: e.target.value }))} /></div>
-            <div><Label>Dosis</Label><Input value={form.dosis} onChange={(e) => setForm((s) => ({ ...s, dosis: e.target.value }))} /></div>
-            <div><Label>Laboratorio</Label><Input value={form.laboratorio} onChange={(e) => setForm((s) => ({ ...s, laboratorio: e.target.value }))} /></div>
-            <div className="col-span-2"><Label>Presentación</Label><Input value={form.presentacion} onChange={(e) => setForm((s) => ({ ...s, presentacion: e.target.value }))} /></div>
-            <div className="col-span-2"><Label>Indicaciones</Label><Textarea value={form.indicaciones} onChange={(e) => setForm((s) => ({ ...s, indicaciones: e.target.value }))} /></div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsModalOpen(false)}>Cancelar</Button>
-            <Button onClick={() => void handleSaveMedication()} disabled={saving || !form.nombreComercial.trim()}>{saving ? 'Guardando...' : 'Guardar'}</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      <AlertDialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar medicamento?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta acción no se puede deshacer. Se eliminará {deletingMedication?.nombreComercial}.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction className="bg-destructive text-white hover:bg-destructive/90" onClick={() => void handleDeleteMedication()}>
-              Eliminar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </Card>
   )
 }
