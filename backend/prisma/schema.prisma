@@ -20,6 +20,13 @@ enum AppointmentStatus {
   CANCELADO
 }
 
+enum VademecumItemType {
+  MEDICAMENTO
+  INSUMO
+  KIT
+  OTRO
+}
+
 model User {
   id           String    @id @default(cuid())
   email        String    @unique
@@ -94,4 +101,25 @@ model Attendance {
   @@index([patientId])
   @@index([appointmentId])
   @@index([fechaAtencion])
+}
+
+model VademecumItem {
+  id             String            @id @default(cuid())
+  type           VademecumItemType @default(MEDICAMENTO)
+  drug           String?
+  commercialName String
+  dose           String?
+  lab            String?
+  presentation   String?
+  description    String?
+  components     String?
+  notes          String?
+  isActive       Boolean           @default(true)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  @@index([commercialName])
+  @@index([drug])
+  @@index([lab])
+  @@index([type, isActive])
 }
