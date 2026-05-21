@@ -7,6 +7,7 @@ import { authRouter } from '../modules/auth/router.js';
 import { patientsRouter } from '../modules/patients/router.js';
 import { appointmentsRouter } from '../modules/appointments/router.js';
 import { attendancesRouter } from '../modules/attendances/router.js';
+import { vademecumRouter } from '../modules/vademecum/router.js';
 import { requireAuth } from '../middlewares/auth.js';
 
 // const loginLimiter = rateLimit({
@@ -42,6 +43,7 @@ export function createApp() {
   app.use('/patients', requireAuth, patientsRouter);
   app.use('/appointments', requireAuth, appointmentsRouter);
   app.use('/attendances', requireAuth, attendancesRouter);
+  app.use('/vademecum', requireAuth, vademecumRouter);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

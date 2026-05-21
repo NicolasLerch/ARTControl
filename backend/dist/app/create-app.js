@@ -7,6 +7,7 @@ import { authRouter } from '../modules/auth/router.js';
 import { patientsRouter } from '../modules/patients/router.js';
 import { appointmentsRouter } from '../modules/appointments/router.js';
 import { attendancesRouter } from '../modules/attendances/router.js';
+import { vademecumRouter } from '../modules/vademecum/router.js';
 import { requireAuth } from '../middlewares/auth.js';
 // const loginLimiter = rateLimit({
 //   windowMs: 15 * 60 * 1000,
@@ -20,6 +21,7 @@ import { requireAuth } from '../middlewares/auth.js';
 // });
 export function createApp() {
     const app = express();
+    app.set('trust proxy', 1);
     app.use(cors({
         origin: env.FRONTEND_URL,
         credentials: true,
@@ -33,6 +35,7 @@ export function createApp() {
     app.use('/patients', requireAuth, patientsRouter);
     app.use('/appointments', requireAuth, appointmentsRouter);
     app.use('/attendances', requireAuth, attendancesRouter);
+    app.use('/vademecum', requireAuth, vademecumRouter);
     app.use(notFoundHandler);
     app.use(errorHandler);
     return app;
