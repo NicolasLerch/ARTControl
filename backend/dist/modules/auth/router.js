@@ -36,21 +36,24 @@ async function createPersistentSession(req, userId) {
 }
 const loginLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    limit: 3,
+    limit: 10,
     standardHeaders: true,
     legacyHeaders: false,
+    skipSuccessfulRequests: true,
+    keyGenerator: (req) => `${req.ip}:${String(req.body?.email ?? '').toLowerCase()}`,
     message: {
-        message: 'Demasiados intentos de login',
+        message: 'Demasiados intentos de login. Esperá unos minutos e intentá nuevamente.',
         code: 'RATE_LIMITED',
     },
 });
 const verifyTwoFactorLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    limit: 3,
+    limit: 10,
     standardHeaders: true,
     legacyHeaders: false,
+    skipSuccessfulRequests: true,
     message: {
-        message: 'Demasiados intentos de verificación 2FA',
+        message: 'Demasiados intentos de verificación 2FA. Esperá unos minutos e intentá nuevamente.',
         code: 'RATE_LIMITED',
     },
 });
