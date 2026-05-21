@@ -76,6 +76,18 @@ export function Vademecum({ userRole }: { userRole: UserRole }) {
     } finally { setSaving(false) }
   }
 
+  const handleCopyRecipe = async (medication: Medication) => {
+    const recipeText = `${medication.droga} ${medication.dosis} ${medication.nombreComercial} ${medication.presentacion}`
+      .replace(/\s+/g, ' ')
+      .trim()
+
+    try {
+      await navigator.clipboard.writeText(recipeText)
+    } catch {
+      // no-op: no interrumpir la UX si el navegador bloquea el portapapeles
+    }
+  }
+
   useEffect(() => {
     let active = true
 
