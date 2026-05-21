@@ -1,6 +1,6 @@
 'use client'
 
-import { Appointment, AppointmentStatus, AttendanceRecord, AuthUser, Patient, PatientTimelineItem } from '@/lib/types'
+import { Appointment, AppointmentStatus, AttendanceRecord, AuthUser, Medication, Patient, PatientTimelineItem } from '@/lib/types'
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'
 
@@ -172,6 +172,32 @@ function mapAttendance(attendance: {
     createdAt: attendance.createdAt,
     updatedAt: attendance.updatedAt,
     patient: attendance.patient,
+  }
+}
+
+function mapMedication(item: {
+  id: string
+  droga?: string | null
+  nombreComercial?: string | null
+  dosis?: string | null
+  laboratorio?: string | null
+  presentacion?: string | null
+  indicaciones?: string | null
+  drug?: string | null
+  commercialName?: string | null
+  dose?: string | null
+  lab?: string | null
+  presentation?: string | null
+  description?: string | null
+}): Medication {
+  return {
+    id: item.id,
+    droga: item.droga ?? item.drug ?? '',
+    nombreComercial: item.nombreComercial ?? item.commercialName ?? '',
+    dosis: item.dosis ?? item.dose ?? '',
+    laboratorio: item.laboratorio ?? item.lab ?? '',
+    presentacion: item.presentacion ?? item.presentation ?? '',
+    indicaciones: item.indicaciones ?? item.description ?? '',
   }
 }
 
@@ -366,4 +392,26 @@ export async function createAttendance(payload: {
   })
 
   return mapAttendance(data.attendance)
+}
+
+export async function listMedications(params: {
+  q?: string
+  type?: 'MEDICAMENTO' | 'INSUMO' | 'KIT' | 'OTRO'
+  isActive?: boolean
+  page?: number
+  pageSize?: number
+} = {}) {
+  const data = await request<{
+    items: Array<Parameters<typeof mapMedication>[0]>
+    total: number
+    page: number
+    pageSize: number
+  }>('/vademecum', {
+    query: params,
+  })
+
+  return {
+    ...data,
+    items: data.items.map(mapMedication),
+  }
 }
