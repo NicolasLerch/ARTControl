@@ -10,6 +10,7 @@ import { PatientsList } from '@/components/patients/patients-list'
 import { AttendedToday } from '@/components/attended/attended-today'
 import { ComingSoonPanel } from '@/components/shared/coming-soon-panel'
 import { Vademecum } from '@/components/vademecum/vademecum'
+import { PharmaciesList } from '@/components/pharmacies/pharmacies-list'
 import { TwoFactorSetupCard } from '@/components/auth/two-factor-setup-card'
 import { useAuthSession } from '@/lib/hooks/use-auth-session'
 import { logout } from '@/lib/api/client'
@@ -48,9 +49,9 @@ export default function HomePage() {
       case 'vademecum':
         return <Vademecum userRole={currentUserRole} />
       case 'farmacias':
-        return <ComingSoonPanel title="Farmacias" description="La integración operativa de farmacias queda fuera del MVP y se retomará más adelante." />
+        return <PharmaciesList userRole={currentUserRole} />
       case 'especialistas':
-        return <ComingSoonPanel title="Horarios especialistas" description="La agenda de especialistas queda marcada como próxima funcionalidad." />
+        return <ComingSoonPanel title="Horarios especialistas" description="La agenda de especialistas queda marcada como proxima funcionalidad." />
       default:
         return <AppointmentsDashboard onAddAppointment={(date) => {
           setAppointmentDefaultDate(format(date, 'yyyy-MM-dd'))
@@ -62,7 +63,7 @@ export default function HomePage() {
   if (loading || !user) {
     return (
       <main className="flex min-h-screen items-center justify-center">
-        <p className="text-sm text-muted-foreground">Cargando sesión...</p>
+        <p className="text-sm text-muted-foreground">Cargando sesion...</p>
       </main>
     )
   }
