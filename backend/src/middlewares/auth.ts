@@ -5,6 +5,8 @@ import { prisma } from '../lib/prisma.js';
 
 type AuthUser = {
   id: string;
+  nombre: string;
+  apellido: string;
   email: string;
   role: 'ADMIN' | 'USER';
   totpEnabled: boolean;
@@ -50,6 +52,8 @@ export async function requireAuth(req: AuthedRequest, res: Response, next: NextF
   req.authSessionId = session.id;
   req.authUser = {
     id: session.user.id,
+    nombre: session.user.nombre,
+    apellido: session.user.apellido,
     email: session.user.email,
     role: session.user.role,
     totpEnabled: session.user.totpEnabled,

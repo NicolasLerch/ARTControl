@@ -20,7 +20,7 @@ interface HeaderProps {
 
 export function Header({ user, onLogout }: HeaderProps) {
   const { theme, setTheme } = useTheme()
-  const initials = user.email.slice(0, 2).toUpperCase()
+  const initials = `${user.nombre[0] ?? ''}${user.apellido[0] ?? ''}`.toUpperCase() || user.email.slice(0, 2).toUpperCase()
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -59,6 +59,9 @@ export function Header({ user, onLogout }: HeaderProps) {
             <DropdownMenuContent className="w-64" align="end" forceMount>
               <div className="flex items-center justify-start gap-3 p-2">
                 <div className="flex flex-col space-y-1 leading-none">
+                  <p className="font-medium">
+                    {user.nombre} {user.apellido}
+                  </p>
                   <p className="font-medium">{user.email}</p>
                   <p className="text-xs text-muted-foreground">
                     {user.role} {user.totpEnabled ? '• 2FA activo' : '• 2FA pendiente'}

@@ -29,6 +29,8 @@ enum VademecumItemType {
 
 model User {
   id           String    @id @default(cuid())
+  nombre       String
+  apellido     String
   email        String    @unique
   passwordHash String
   role         Role      @default(USER)
