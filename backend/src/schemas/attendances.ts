@@ -16,6 +16,7 @@ export const attendanceCreateSchema = z.object({
 });
 
 export const attendanceUpdateSchema = z.object({
+  patientId: cuidSchema.optional(),
   fechaAtencion: attendanceDateTimeSchema.optional(),
   observaciones: z.string().trim().max(2000).optional().nullable(),
 }).refine((value) => Object.keys(value).length > 0, 'Debe enviar al menos un campo');

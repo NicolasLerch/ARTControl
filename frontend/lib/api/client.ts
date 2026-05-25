@@ -443,6 +443,19 @@ export async function createAttendance(payload: {
   return mapAttendance(data.attendance)
 }
 
+export async function updateAttendance(id: string, payload: {
+  patientId?: string
+  fechaAtencion?: string
+  observaciones?: string
+}) {
+  const data = await request<{ attendance: Parameters<typeof mapAttendance>[0] }>(`/attendances/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  })
+
+  return mapAttendance(data.attendance)
+}
+
 export async function deleteAttendance(attendanceId: string) {
   return request<void>(`/attendances/${attendanceId}`, {
     method: 'DELETE',
