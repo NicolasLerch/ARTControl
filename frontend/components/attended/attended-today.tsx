@@ -30,7 +30,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { createAttendance, deletePatient, listAppointments, listAttendances, listPatients } from '@/lib/api/client'
+import { createAttendance, deleteAttendance, listAppointments, listAttendances, listPatients } from '@/lib/api/client'
 import { emitDataChanged, subscribeDataChanged } from '@/lib/api/events'
 import { Appointment, AttendanceRecord, Patient } from '@/lib/types'
 import { CreatePatientModal } from '@/components/patients/create-patient-modal'
@@ -161,111 +161,111 @@ function RegisterAttendedPatientModal({ open, onOpenChange, selectedDate }: Regi
           <DialogHeader>
             <DialogTitle>Agregar paciente atendido</DialogTitle>
             <DialogDescription>
-              Buscá un paciente por DNI o apellido. Si no existe, podés crearlo y dejarlo registrado como atendido hoy.
+              Busca un paciente por DNI o apellido. Si no existe, puedes crearlo y dejarlo registrado como atendido hoy.
             </DialogDescription>
           </DialogHeader>
 
           <form onSubmit={handleSubmit}>
-              {!selectedPatient ? (
-                <div className="space-y-3">
-                  <Label>Paciente *</Label>
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input
-                      value={searchQuery}
-                      onChange={(event) => setSearchQuery(event.target.value)}
-                      placeholder="Buscar por DNI o apellido..."
-                      className="pl-9"
-                    />
-                  </div>
+            {!selectedPatient ? (
+              <div className="space-y-3">
+                <Label>Paciente *</Label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    value={searchQuery}
+                    onChange={(event) => setSearchQuery(event.target.value)}
+                    placeholder="Buscar por DNI o apellido..."
+                    className="pl-9"
+                  />
+                </div>
 
-                  {searchQuery.length >= 2 && (
-                    <div className="rounded-lg border border-border">
-                      {searchResults.length > 0 ? (
-                        <ScrollArea className="max-h-[200px]">
-                          {searchResults.map((patient) => (
-                            <button
-                              key={patient.id}
-                              type="button"
-                              onClick={() => {
-                                setSelectedPatient(patient)
-                                setSearchQuery('')
-                              }}
-                              className="flex w-full items-center gap-3 px-3 py-2 text-left transition-colors hover:bg-accent"
-                            >
-                              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
-                                <User className="h-4 w-4" />
-                              </div>
-                              <div>
-                                <p className="text-sm font-medium">
-                                  {patient.apellido}, {patient.nombre}
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                  DNI: {patient.dni}
-                                </p>
-                              </div>
-                            </button>
-                          ))}
-                        </ScrollArea>
-                      ) : (
-                        <div className="flex flex-col items-center gap-2 p-4 text-center">
-                          <p className="text-sm text-muted-foreground">
-                            No se encontraron pacientes
-                          </p>
-                          <Button
+                {searchQuery.length >= 2 && (
+                  <div className="rounded-lg border border-border">
+                    {searchResults.length > 0 ? (
+                      <ScrollArea className="max-h-[200px]">
+                        {searchResults.map((patient) => (
+                          <button
+                            key={patient.id}
                             type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setShowCreatePatient(true)}
+                            onClick={() => {
+                              setSelectedPatient(patient)
+                              setSearchQuery('')
+                            }}
+                            className="flex w-full items-center gap-3 px-3 py-2 text-left transition-colors hover:bg-accent"
                           >
-                            <UserPlus className="mr-2 h-4 w-4" />
-                            Crear paciente
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {searchQuery.length === 0 && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="w-full"
-                      onClick={() => setShowCreatePatient(true)}
-                    >
-                      <UserPlus className="mr-2 h-4 w-4" />
-                      Crear nuevo paciente
-                    </Button>
-                  )}
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  <Label>Paciente seleccionado</Label>
-                  <div className="flex items-center justify-between rounded-lg border border-border bg-muted/50 p-3">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
-                        <User className="h-5 w-5" />
-                      </div>
-                      <div>
-                        <p className="font-medium">
-                          {selectedPatient.apellido}, {selectedPatient.nombre}
-                        </p>
+                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
+                              <User className="h-4 w-4" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium">
+                                {patient.apellido}, {patient.nombre}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                DNI: {patient.dni}
+                              </p>
+                            </div>
+                          </button>
+                        ))}
+                      </ScrollArea>
+                    ) : (
+                      <div className="flex flex-col items-center gap-2 p-4 text-center">
                         <p className="text-sm text-muted-foreground">
-                          DNI: {selectedPatient.dni}
+                          No se encontraron pacientes
                         </p>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setShowCreatePatient(true)}
+                        >
+                          <UserPlus className="mr-2 h-4 w-4" />
+                          Crear paciente
+                        </Button>
                       </div>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setSelectedPatient(null)}
-                    >
-                      Cambiar
-                    </Button>
+                    )}
                   </div>
+                )}
+
+                {searchQuery.length === 0 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => setShowCreatePatient(true)}
+                  >
+                    <UserPlus className="mr-2 h-4 w-4" />
+                    Crear nuevo paciente
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <Label>Paciente seleccionado</Label>
+                <div className="flex items-center justify-between rounded-lg border border-border bg-muted/50 p-3">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
+                      <User className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="font-medium">
+                        {selectedPatient.apellido}, {selectedPatient.nombre}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        DNI: {selectedPatient.dni}
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSelectedPatient(null)}
+                  >
+                    Cambiar
+                  </Button>
                 </div>
-              )}
+              </div>
+            )}
 
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-2 gap-4">
@@ -290,7 +290,7 @@ function RegisterAttendedPatientModal({ open, onOpenChange, selectedDate }: Regi
                   id="observaciones"
                   value={formData.observaciones}
                   onChange={(event) => setFormData((prev) => ({ ...prev, observaciones: event.target.value }))}
-                  placeholder="Observaciones de la atención"
+                  placeholder="Observaciones de la atencion"
                   rows={3}
                 />
               </div>
@@ -359,12 +359,14 @@ export function AttendedToday() {
   const attendedRows = [
     ...attendedAppointments.map((appointment) => ({
       key: `appt-${appointment.id}`,
+      attendanceId: manualAttendances.find((attendance) => attendance.appointmentId === appointment.id)?.id ?? null,
       hora: appointment.hora,
       observaciones: appointment.observaciones,
       patient: ensurePatient(appointment.patient),
     })),
     ...manualOnlyAttendances.map((attendance) => ({
       key: `attendance-${attendance.id}`,
+      attendanceId: attendance.id,
       hora: new Date(attendance.fechaAtencion ?? '').toLocaleTimeString('es-AR', {
         hour: '2-digit',
         minute: '2-digit',
@@ -380,14 +382,16 @@ export function AttendedToday() {
     setShowPatientModal(true)
   }
 
-  const handleDeletePatient = async (patient: Patient) => {
+  const handleDeleteAttendance = async (row: typeof attendedRows[number]) => {
+    if (!row.patient || !row.attendanceId) return
+
     const confirmed = window.confirm(
-      `Se eliminará el paciente ${patient.apellido}, ${patient.nombre} junto con sus turnos y atenciones asociadas. ¿Continuar?`
+      `Se eliminara la atencion de ${row.patient.apellido}, ${row.patient.nombre} para esta fecha. El paciente seguira existiendo en la base de datos. ¿Continuar?`
     )
 
     if (!confirmed) return
 
-    await deletePatient(patient.id)
+    await deleteAttendance(row.attendanceId)
     emitDataChanged()
   }
 
@@ -476,10 +480,11 @@ export function AttendedToday() {
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 className="text-destructive focus:text-destructive"
-                                onClick={() => handleDeletePatient(row.patient!)}
+                                onClick={() => handleDeleteAttendance(row)}
+                                disabled={!row.attendanceId}
                               >
                                 <Trash2 className="mr-2 h-4 w-4" />
-                                Eliminar paciente
+                                Eliminar atencion
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>

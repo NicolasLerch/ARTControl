@@ -170,3 +170,42 @@ attendancesRouter.patch('/:id', async (req, res, next) => {
     next(error);
   }
 });
+
+attendancesRouter.delete('/:id', async (req, res, next) => {
+  try {
+    const attendance = await prisma.attendance.findUnique({
+      where: { id: req.params.id },
+      select: {
+        id: true,
+        appointmentId: true,
+      },
+    });
+
+    if (!attendance) {
+      return res.status(404).json({
+        message: 'Atencion no encontrada',
+        code: 'ATTENDANCE_NOT_FOUND',
+      });
+    }
+
+    await prisma.$transaction(async (tx) => {
+      await tx.attendance.delete({
+        where: { id: attendance.id },
+      });
+
+      if (attendance.appointmentId) {
+        await tx.appointment.update({
+          where: { id: attendance.appointmentId },
+          data: {
+            estado: 'PENDIENTE',
+            cancelledAt: null,
+          },
+        });
+      }
+    });
+
+    res.status(204).send();
+  } catch (error) {
+    next(error);
+  }
+});

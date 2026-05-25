@@ -394,6 +394,12 @@ export async function createAttendance(payload: {
   return mapAttendance(data.attendance)
 }
 
+export async function deleteAttendance(attendanceId: string) {
+  return request<void>(`/attendances/${attendanceId}`, {
+    method: 'DELETE',
+  })
+}
+
 export async function listMedications(params: {
   q?: string
   type?: 'MEDICAMENTO' | 'INSUMO' | 'KIT' | 'OTRO'
