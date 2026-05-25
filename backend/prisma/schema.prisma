@@ -69,6 +69,52 @@ model Patient {
   @@index([dni])
 }
 
+model Art {
+  id        String               @id @default(cuid())
+  nombre    String               @unique
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+  coverages ArtPharmacyCoverage[]
+}
+
+model Pharmacy {
+  id        String           @id @default(cuid())
+  nombre    String
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  branches  PharmacyBranch[]
+
+  @@unique([nombre])
+  @@index([nombre])
+}
+
+model PharmacyBranch {
+  id          String               @id @default(cuid())
+  pharmacyId  String
+  direccion   String
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+  pharmacy    Pharmacy             @relation(fields: [pharmacyId], references: [id], onDelete: Cascade)
+  coverages   ArtPharmacyCoverage[]
+
+  @@unique([pharmacyId, direccion])
+  @@index([direccion])
+}
+
+model ArtPharmacyCoverage {
+  id               String         @id @default(cuid())
+  artId            String
+  pharmacyBranchId String
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  art              Art            @relation(fields: [artId], references: [id], onDelete: Cascade)
+  pharmacyBranch   PharmacyBranch @relation(fields: [pharmacyBranchId], references: [id], onDelete: Cascade)
+
+  @@unique([artId, pharmacyBranchId])
+  @@index([artId])
+  @@index([pharmacyBranchId])
+}
+
 model Appointment {
   id            String            @id @default(cuid())
   patientId     String
