@@ -148,6 +148,7 @@ attendancesRouter.patch('/:id', async (req, res, next) => {
     const attendance = await prisma.attendance.update({
       where: { id: req.params.id },
       data: {
+        ...(payload.patientId ? { patientId: payload.patientId } : {}),
         ...(payload.fechaAtencion ? { fechaAtencion: new Date(payload.fechaAtencion) } : {}),
         ...(payload.observaciones !== undefined ? { observaciones: payload.observaciones } : {}),
       },

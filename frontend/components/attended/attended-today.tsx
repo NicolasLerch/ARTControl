@@ -1,13 +1,23 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { useEffect, useMemo, useState } from 'react'
+import { format } from 'date-fns'
+import { es } from 'date-fns/locale'
+import { Clock, MoreVertical, Pencil, Trash2, UserCheck, UserPlus } from 'lucide-react'
+
+import { deleteAttendance, listAppointments, listAttendances } from '@/lib/api/client'
+import { emitDataChanged, subscribeDataChanged } from '@/lib/api/events'
+import { Appointment, AttendanceRecord, Patient } from '@/lib/types'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   Table,
   TableBody,
@@ -16,44 +26,11 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import { createAttendance, deleteAttendance, listAppointments, listAttendances, listPatients } from '@/lib/api/client'
-import { emitDataChanged, subscribeDataChanged } from '@/lib/api/events'
-import { Appointment, AttendanceRecord, Patient } from '@/lib/types'
-import { CreatePatientModal } from '@/components/patients/create-patient-modal'
-import { format } from 'date-fns'
-import { es } from 'date-fns/locale'
-import { Clock, MoreVertical, Pencil, Search, Trash2, User, UserCheck, UserPlus } from 'lucide-react'
+import { CreateAttendanceModal } from '@/components/attended/create-attendance-modal'
 
 function parseLocalDate(dateString: string) {
   const [year, month, day] = dateString.split('-').map(Number)
   return new Date(year, month - 1, day)
-}
-
-function currentTimeValue() {
-  return format(new Date(), 'HH:mm')
-}
-
-function buildAttendanceDateTime(date: string, time?: string) {
-  if (!time) return date
-
-  const [year, month, day] = date.split('-').map(Number)
-  const [hours, minutes] = time.split(':').map(Number)
-  const localDate = new Date(year, month - 1, day, hours, minutes, 0, 0)
-  return localDate.toISOString()
 }
 
 function ensurePatient(patient?: Appointment['patient'] | AttendanceRecord['patient']): Patient | undefined {
@@ -71,259 +48,29 @@ function ensurePatient(patient?: Appointment['patient'] | AttendanceRecord['pati
   }
 }
 
-interface RegisterAttendedPatientModalProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  selectedDate: string
+function formatAttendanceTime(attendance: AttendanceRecord, fallbackHour?: string) {
+  if (!attendance.fechaAtencion) {
+    return fallbackHour ?? '--:--'
+  }
+
+  const localTime = format(new Date(attendance.fechaAtencion), 'HH:mm')
+  return localTime === '00:00' && fallbackHour ? fallbackHour : localTime
 }
 
-function RegisterAttendedPatientModal({ open, onOpenChange, selectedDate }: RegisterAttendedPatientModalProps) {
-  const [searchQuery, setSearchQuery] = useState('')
-  const [searchResults, setSearchResults] = useState<Patient[]>([])
-  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null)
-  const [showCreatePatient, setShowCreatePatient] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [formData, setFormData] = useState({
-    observaciones: '',
-    hora: currentTimeValue(),
-  })
-
-  useEffect(() => {
-    let active = true
-
-    const searchPatients = async () => {
-      if (searchQuery.length < 2) {
-        setSearchResults([])
-        return
-      }
-
-      const results = await listPatients({ q: searchQuery, pageSize: 10 })
-
-      if (active) {
-        setSearchResults(results.items)
-      }
-    }
-
-    searchPatients()
-
-    return () => {
-      active = false
-    }
-  }, [searchQuery])
-
-  const resetForm = () => {
-    setSearchQuery('')
-    setSearchResults([])
-    setSelectedPatient(null)
-    setFormData({
-      observaciones: '',
-      hora: currentTimeValue(),
-    })
-  }
-
-  const handleOpenChange = (nextOpen: boolean) => {
-    if (!nextOpen) {
-      resetForm()
-    } else {
-      setFormData((prev) => ({ ...prev, hora: currentTimeValue() }))
-    }
-    onOpenChange(nextOpen)
-  }
-
-  const handlePatientCreated = (patient: Patient) => {
-    setSelectedPatient(patient)
-    setShowCreatePatient(false)
-    setSearchQuery('')
-  }
-
-  const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault()
-    if (!selectedPatient) return
-
-    setLoading(true)
-    try {
-      await createAttendance({
-        patientId: selectedPatient.id,
-        fechaAtencion: buildAttendanceDateTime(selectedDate, formData.hora),
-        observaciones: formData.observaciones,
-      })
-      emitDataChanged()
-      handleOpenChange(false)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  return (
-    <>
-      <Dialog open={open} onOpenChange={handleOpenChange}>
-        <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Agregar paciente atendido</DialogTitle>
-            <DialogDescription>
-              Busca un paciente por DNI o apellido. Si no existe, puedes crearlo y dejarlo registrado como atendido hoy.
-            </DialogDescription>
-          </DialogHeader>
-
-          <form onSubmit={handleSubmit}>
-            {!selectedPatient ? (
-              <div className="space-y-3">
-                <Label>Paciente *</Label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    value={searchQuery}
-                    onChange={(event) => setSearchQuery(event.target.value)}
-                    placeholder="Buscar por DNI o apellido..."
-                    className="pl-9"
-                  />
-                </div>
-
-                {searchQuery.length >= 2 && (
-                  <div className="rounded-lg border border-border">
-                    {searchResults.length > 0 ? (
-                      <ScrollArea className="max-h-[200px]">
-                        {searchResults.map((patient) => (
-                          <button
-                            key={patient.id}
-                            type="button"
-                            onClick={() => {
-                              setSelectedPatient(patient)
-                              setSearchQuery('')
-                            }}
-                            className="flex w-full items-center gap-3 px-3 py-2 text-left transition-colors hover:bg-accent"
-                          >
-                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
-                              <User className="h-4 w-4" />
-                            </div>
-                            <div>
-                              <p className="text-sm font-medium">
-                                {patient.apellido}, {patient.nombre}
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                DNI: {patient.dni}
-                              </p>
-                            </div>
-                          </button>
-                        ))}
-                      </ScrollArea>
-                    ) : (
-                      <div className="flex flex-col items-center gap-2 p-4 text-center">
-                        <p className="text-sm text-muted-foreground">
-                          No se encontraron pacientes
-                        </p>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setShowCreatePatient(true)}
-                        >
-                          <UserPlus className="mr-2 h-4 w-4" />
-                          Crear paciente
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {searchQuery.length === 0 && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => setShowCreatePatient(true)}
-                  >
-                    <UserPlus className="mr-2 h-4 w-4" />
-                    Crear nuevo paciente
-                  </Button>
-                )}
-              </div>
-            ) : (
-              <div className="space-y-2">
-                <Label>Paciente seleccionado</Label>
-                <div className="flex items-center justify-between rounded-lg border border-border bg-muted/50 p-3">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
-                      <User className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <p className="font-medium">
-                        {selectedPatient.apellido}, {selectedPatient.nombre}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        DNI: {selectedPatient.dni}
-                      </p>
-                    </div>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setSelectedPatient(null)}
-                  >
-                    Cambiar
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="hora">Hora *</Label>
-                  <Input
-                    id="hora"
-                    type="time"
-                    value={formData.hora}
-                    onChange={(event) => setFormData((prev) => ({ ...prev, hora: event.target.value }))}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Fecha</Label>
-                  <Input value={selectedDate} disabled readOnly type="date" />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="observaciones">Observaciones</Label>
-                <Textarea
-                  id="observaciones"
-                  value={formData.observaciones}
-                  onChange={(event) => setFormData((prev) => ({ ...prev, observaciones: event.target.value }))}
-                  placeholder="Observaciones de la atencion"
-                  rows={3}
-                />
-              </div>
-            </div>
-
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
-                Cancelar
-              </Button>
-              <Button type="submit" disabled={!selectedPatient || loading}>
-                {loading ? 'Guardando...' : 'Registrar atendido'}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      <CreatePatientModal
-        open={showCreatePatient}
-        onOpenChange={setShowCreatePatient}
-        onPatientCreated={handlePatientCreated}
-        initialDni={searchQuery.match(/^\d+$/) ? searchQuery : ''}
-      />
-    </>
-  )
+type AttendedRow = {
+  key: string
+  attendance: AttendanceRecord | null
+  appointment: Appointment | null
+  patient?: Patient
+  hora: string
+  observaciones: string
 }
 
 export function AttendedToday() {
   const [appointments, setAppointments] = useState<Appointment[]>([])
-  const [manualAttendances, setManualAttendances] = useState<AttendanceRecord[]>([])
-  const [showPatientModal, setShowPatientModal] = useState(false)
-  const [editingPatient, setEditingPatient] = useState<Patient | null>(null)
-  const [showRegisterAttended, setShowRegisterAttended] = useState(false)
+  const [attendances, setAttendances] = useState<AttendanceRecord[]>([])
+  const [showAttendanceModal, setShowAttendanceModal] = useState(false)
+  const [editingAttendance, setEditingAttendance] = useState<AttendanceRecord | null>(null)
   const [selectedDate, setSelectedDate] = useState(() => format(new Date(), 'yyyy-MM-dd'))
 
   useEffect(() => {
@@ -331,21 +78,17 @@ export function AttendedToday() {
 
     const load = async () => {
       const [appointmentItems, attendanceItems] = await Promise.all([
-        listAppointments({
-          date: selectedDate,
-        }),
-        listAttendances({
-          date: selectedDate,
-        }),
+        listAppointments({ date: selectedDate }),
+        listAttendances({ date: selectedDate }),
       ])
 
       if (active) {
         setAppointments(appointmentItems)
-        setManualAttendances(attendanceItems)
+        setAttendances(attendanceItems)
       }
     }
 
-    load()
+    void load()
     const unsubscribe = subscribeDataChanged(load)
 
     return () => {
@@ -354,46 +97,63 @@ export function AttendedToday() {
     }
   }, [selectedDate])
 
-  const attendedAppointments = appointments.filter((appointment) => appointment.estado === 'asistio')
-  const manualOnlyAttendances = manualAttendances.filter((attendance) => !attendance.appointmentId)
-  const attendedRows = [
-    ...attendedAppointments.map((appointment) => ({
-      key: `appt-${appointment.id}`,
-      attendanceId: manualAttendances.find((attendance) => attendance.appointmentId === appointment.id)?.id ?? null,
-      hora: appointment.hora,
-      observaciones: appointment.observaciones,
-      patient: ensurePatient(appointment.patient),
-    })),
-    ...manualOnlyAttendances.map((attendance) => ({
-      key: `attendance-${attendance.id}`,
-      attendanceId: attendance.id,
-      hora: new Date(attendance.fechaAtencion ?? '').toLocaleTimeString('es-AR', {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false,
-      }),
-      observaciones: attendance.observaciones,
-      patient: ensurePatient(attendance.patient),
-    })),
-  ].sort((a, b) => a.hora.localeCompare(b.hora))
+  const attendedRows = useMemo<AttendedRow[]>(() => {
+    const attendanceByAppointmentId = new Map(
+      attendances
+        .filter((attendance) => attendance.appointmentId)
+        .map((attendance) => [attendance.appointmentId as string, attendance]),
+    )
 
-  const handleEditPatient = (patient: Patient) => {
-    setEditingPatient(patient)
-    setShowPatientModal(true)
+    const appointmentRows = appointments
+      .filter((appointment) => appointment.estado === 'asistio')
+      .map((appointment) => {
+        const attendance = attendanceByAppointmentId.get(appointment.id)
+
+        return {
+          key: attendance ? `attendance-${attendance.id}` : `appointment-${appointment.id}`,
+          attendance: attendance ?? null,
+          appointment,
+          patient: ensurePatient(attendance?.patient ?? appointment.patient),
+          hora: attendance ? formatAttendanceTime(attendance, appointment.hora) : appointment.hora,
+          observaciones: attendance?.observaciones || appointment.observaciones || '',
+        }
+      })
+
+    const manualRows = attendances
+      .filter((attendance) => !attendance.appointmentId)
+      .map((attendance) => ({
+        key: `attendance-${attendance.id}`,
+        attendance,
+        appointment: null,
+        patient: ensurePatient(attendance.patient),
+        hora: formatAttendanceTime(attendance),
+        observaciones: attendance.observaciones || '',
+      }))
+
+    return [...appointmentRows, ...manualRows].sort((a, b) => a.hora.localeCompare(b.hora))
+  }, [appointments, attendances])
+
+  const handleEditAttendance = (row: AttendedRow) => {
+    setEditingAttendance(row.attendance)
+    setShowAttendanceModal(true)
   }
 
-  const handleDeleteAttendance = async (row: typeof attendedRows[number]) => {
-    if (!row.patient || !row.attendanceId) return
+  const handleDeleteAttendance = async (row: AttendedRow) => {
+    if (!row.patient || !row.attendance) return
 
     const confirmed = window.confirm(
-      `Se eliminara la atencion de ${row.patient.apellido}, ${row.patient.nombre} para esta fecha. El paciente seguira existiendo en la base de datos. ¿Continuar?`
+      `Se eliminara la atencion de ${row.patient.apellido}, ${row.patient.nombre} para esta fecha. El paciente seguira existiendo en la base de datos. ¿Continuar?`,
     )
 
     if (!confirmed) return
 
-    await deleteAttendance(row.attendanceId)
+    await deleteAttendance(row.attendance.id)
     emitDataChanged()
   }
+
+  const linkedAppointment = editingAttendance?.appointmentId
+    ? appointments.find((appointment) => appointment.id === editingAttendance.appointmentId) ?? null
+    : null
 
   return (
     <>
@@ -417,7 +177,7 @@ export function AttendedToday() {
                 <UserCheck className="mr-1 h-3 w-3" />
                 {attendedRows.length} pacientes
               </Badge>
-              <Button onClick={() => setShowRegisterAttended(true)}>
+              <Button onClick={() => setShowAttendanceModal(true)}>
                 <UserPlus className="mr-2 h-4 w-4" />
                 Agregar paciente
               </Button>
@@ -474,14 +234,14 @@ export function AttendedToday() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => handleEditPatient(row.patient!)}>
+                              <DropdownMenuItem onClick={() => row.attendance && handleEditAttendance(row)} disabled={!row.attendance}>
                                 <Pencil className="mr-2 h-4 w-4" />
-                                Editar paciente
+                                Editar atencion
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 className="text-destructive focus:text-destructive"
                                 onClick={() => handleDeleteAttendance(row)}
-                                disabled={!row.attendanceId}
+                                disabled={!row.attendance}
                               >
                                 <Trash2 className="mr-2 h-4 w-4" />
                                 Eliminar atencion
@@ -522,25 +282,17 @@ export function AttendedToday() {
         </CardContent>
       </Card>
 
-      <RegisterAttendedPatientModal
-        open={showRegisterAttended}
-        onOpenChange={setShowRegisterAttended}
-        selectedDate={selectedDate}
-      />
-
-      <CreatePatientModal
-        open={showPatientModal}
+      <CreateAttendanceModal
+        open={showAttendanceModal}
         onOpenChange={(open) => {
-          setShowPatientModal(open)
+          setShowAttendanceModal(open)
           if (!open) {
-            setEditingPatient(null)
+            setEditingAttendance(null)
           }
         }}
-        onPatientCreated={() => {
-          emitDataChanged()
-          setEditingPatient(null)
-        }}
-        patientToEdit={editingPatient}
+        selectedDate={selectedDate}
+        attendanceToEdit={editingAttendance}
+        linkedAppointment={linkedAppointment}
       />
     </>
   )
