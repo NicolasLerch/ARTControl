@@ -84,7 +84,7 @@ vademecumRouter.get('/', async (req, res, next) => {
         where,
         skip: (query.page - 1) * query.pageSize,
         take: query.pageSize,
-        orderBy: [{ commercialName: 'asc' }, { drug: 'asc' }],
+        orderBy: [{ drug: 'asc' }, { commercialName: 'asc' }],
       }),
     ]);
 
