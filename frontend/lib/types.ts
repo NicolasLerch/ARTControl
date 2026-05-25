@@ -80,10 +80,28 @@ export interface Medication {
 export interface Pharmacy {
   id: string
   nombre: string
+}
+
+export interface Art {
+  id: string
+  nombre: string
+}
+
+export interface PharmacyBranch {
+  id: string
+  pharmacyId: string
+  pharmacyNombre: string
   direccion: string
-  telefono: string
-  horario: string
-  turno24h: boolean
+}
+
+export interface ArtPharmacyCoverage {
+  id: string
+  artId: string
+  artNombre: string
+  pharmacyId: string
+  pharmacyNombre: string
+  pharmacyBranchId: string
+  direccion: string
 }
 
 export interface Specialist {

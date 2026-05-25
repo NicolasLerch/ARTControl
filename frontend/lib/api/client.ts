@@ -1,6 +1,6 @@
 'use client'
 
-import { Appointment, AppointmentStatus, AttendanceRecord, AuthUser, Medication, Patient, PatientTimelineItem } from '@/lib/types'
+import { Appointment, AppointmentStatus, Art, ArtPharmacyCoverage, AttendanceRecord, AuthUser, Medication, Patient, PatientTimelineItem, Pharmacy, PharmacyBranch } from '@/lib/types'
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'
 
@@ -201,6 +201,41 @@ function mapMedication(item: {
   }
 }
 
+function mapArt(art: {
+  id: string
+  nombre: string
+}): Art {
+  return art
+}
+
+function mapPharmacy(pharmacy: {
+  id: string
+  nombre: string
+}): Pharmacy {
+  return pharmacy
+}
+
+function mapPharmacyBranch(branch: {
+  id: string
+  pharmacyId: string
+  pharmacyNombre: string
+  direccion: string
+}): PharmacyBranch {
+  return branch
+}
+
+function mapArtPharmacyCoverage(coverage: {
+  id: string
+  artId: string
+  artNombre: string
+  pharmacyId: string
+  pharmacyNombre: string
+  pharmacyBranchId: string
+  direccion: string
+}): ArtPharmacyCoverage {
+  return coverage
+}
+
 export async function getCurrentUser() {
   const data = await request<{ user: AuthUser }>('/auth/me')
   return data.user
@@ -396,6 +431,78 @@ export async function createAttendance(payload: {
 
 export async function deleteAttendance(attendanceId: string) {
   return request<void>(`/attendances/${attendanceId}`, {
+    method: 'DELETE',
+  })
+}
+
+export async function listPharmacyCoverages(params: {
+  q?: string
+  artId?: string
+  page?: number
+  pageSize?: number
+} = {}) {
+  const data = await request<{
+    items: Array<Parameters<typeof mapArtPharmacyCoverage>[0]>
+    total: number
+    page: number
+    pageSize: number
+  }>('/pharmacies/coverages', {
+    query: params,
+  })
+
+  return {
+    ...data,
+    items: data.items.map(mapArtPharmacyCoverage),
+  }
+}
+
+export async function getPharmacyOptions(params: {
+  q?: string
+  limit?: number
+} = {}) {
+  const data = await request<{
+    arts: Array<Parameters<typeof mapArt>[0]>
+    pharmacies: Array<Parameters<typeof mapPharmacy>[0]>
+    branches: Array<Parameters<typeof mapPharmacyBranch>[0]>
+  }>('/pharmacies/options', {
+    query: params,
+  })
+
+  return {
+    arts: data.arts.map(mapArt),
+    pharmacies: data.pharmacies.map(mapPharmacy),
+    branches: data.branches.map(mapPharmacyBranch),
+  }
+}
+
+export async function createPharmacyCoverage(payload: {
+  artNombre: string
+  pharmacyNombre: string
+  direccion: string
+}) {
+  const data = await request<{ coverage: Parameters<typeof mapArtPharmacyCoverage>[0] }>('/pharmacies/coverages', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+
+  return mapArtPharmacyCoverage(data.coverage)
+}
+
+export async function updatePharmacyCoverage(id: string, payload: {
+  artNombre: string
+  pharmacyNombre: string
+  direccion: string
+}) {
+  const data = await request<{ coverage: Parameters<typeof mapArtPharmacyCoverage>[0] }>(`/pharmacies/coverages/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  })
+
+  return mapArtPharmacyCoverage(data.coverage)
+}
+
+export async function deletePharmacyCoverage(id: string) {
+  return request<void>(`/pharmacies/coverages/${id}`, {
     method: 'DELETE',
   })
 }
