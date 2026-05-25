@@ -24,6 +24,14 @@ import { subscribeDataChanged } from '@/lib/api/events'
 import { Medication, UserRole } from '@/lib/types'
 import { Search, Pill, Building, FlaskConical, Copy, Plus, MoreVertical, Pencil, Trash2 } from 'lucide-react'
 
+function sortMedicationsAlphabetically(items: Medication[]) {
+  return [...items].sort((a, b) =>
+    (a.droga || a.nombreComercial).localeCompare(b.droga || b.nombreComercial, 'es', {
+      sensitivity: 'base',
+    }),
+  )
+}
+
 export function Vademecum({ userRole }: { userRole: UserRole }) {
   const [searchQuery, setSearchQuery] = useState('')
   const [medications, setMedications] = useState<Medication[]>([])
@@ -90,7 +98,7 @@ export function Vademecum({ userRole }: { userRole: UserRole }) {
         })
 
         if (active) {
-          setMedications(response.items)
+          setMedications(sortMedicationsAlphabetically(response.items))
           setTotal(response.total)
         }
       } catch (err) {
