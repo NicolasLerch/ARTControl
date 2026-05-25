@@ -393,6 +393,20 @@ export async function createAppointment(payload: {
   return mapAppointment(data.appointment)
 }
 
+export async function updateAppointment(id: string, payload: {
+  patientId?: string
+  fecha?: string
+  hora?: string
+  observaciones?: string
+}) {
+  const data = await request<{ appointment: Parameters<typeof mapAppointment>[0] }>(`/appointments/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  })
+
+  return mapAppointment(data.appointment)
+}
+
 export async function updateAppointmentStatus(id: string, estado: AppointmentStatus) {
   const data = await request<{ appointment: Parameters<typeof mapAppointment>[0] }>(`/appointments/${id}/status`, {
     method: 'PATCH',

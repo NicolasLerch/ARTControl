@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -14,10 +14,12 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { createAppointment, listPatients } from '@/lib/api/client'
+import { createAppointment, listPatients, updateAppointment } from '@/lib/api/client'
 import { emitDataChanged } from '@/lib/api/events'
-import { Patient } from '@/lib/types'
+import { getFormErrorState, type FormFieldErrors } from '@/lib/forms'
+import { Appointment, Patient } from '@/lib/types'
 import { CreatePatientModal } from '../patients/create-patient-modal'
+import { toast } from '@/hooks/use-toast'
 import { Search, User, UserPlus } from 'lucide-react'
 import { format } from 'date-fns'
 
@@ -25,28 +27,52 @@ interface CreateAppointmentModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   initialDate?: string
+  appointmentToEdit?: Appointment | null
 }
 
-export function CreateAppointmentModal({ open, onOpenChange, initialDate }: CreateAppointmentModalProps) {
+export function CreateAppointmentModal({
+  open,
+  onOpenChange,
+  initialDate,
+  appointmentToEdit = null,
+}: CreateAppointmentModalProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<Patient[]>([])
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null)
   const [showCreatePatient, setShowCreatePatient] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [fieldErrors, setFieldErrors] = useState<FormFieldErrors>({})
   const [formData, setFormData] = useState({
     fecha: initialDate ?? format(new Date(), 'yyyy-MM-dd'),
     hora: '09:00',
-    observaciones: ''
+    observaciones: '',
   })
+  const isEditing = Boolean(appointmentToEdit)
 
   useEffect(() => {
-    if (open) {
-      setFormData((prev) => ({
-        ...prev,
-        fecha: initialDate ?? format(new Date(), 'yyyy-MM-dd'),
-      }))
+    if (!open) {
+      return
     }
-  }, [initialDate, open])
+
+    setFieldErrors({})
+
+    if (appointmentToEdit) {
+      setSelectedPatient(appointmentToEdit.patient ?? null)
+      setFormData({
+        fecha: appointmentToEdit.fecha,
+        hora: appointmentToEdit.hora,
+        observaciones: appointmentToEdit.observaciones ?? '',
+      })
+      return
+    }
+
+    setSelectedPatient(null)
+    setFormData({
+      fecha: initialDate ?? format(new Date(), 'yyyy-MM-dd'),
+      hora: '09:00',
+      observaciones: '',
+    })
+  }, [appointmentToEdit, initialDate, open])
 
   useEffect(() => {
     let active = true
@@ -64,43 +90,73 @@ export function CreateAppointmentModal({ open, onOpenChange, initialDate }: Crea
       }
     }
 
-    search()
+    void search()
 
     return () => {
       active = false
     }
   }, [searchQuery])
 
+  const resetForm = () => {
+    setSearchQuery('')
+    setSearchResults([])
+    setSelectedPatient(appointmentToEdit?.patient ?? null)
+    setFieldErrors({})
+    setFormData({
+      fecha: appointmentToEdit?.fecha ?? initialDate ?? format(new Date(), 'yyyy-MM-dd'),
+      hora: appointmentToEdit?.hora ?? '09:00',
+      observaciones: appointmentToEdit?.observaciones ?? '',
+    })
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!selectedPatient) return
 
     setLoading(true)
+    setFieldErrors({})
+
     try {
-      await createAppointment({
-        patientId: selectedPatient.id,
-        fecha: formData.fecha,
-        hora: formData.hora,
-        observaciones: formData.observaciones
-      })
+      if (appointmentToEdit) {
+        await updateAppointment(appointmentToEdit.id, {
+          patientId: selectedPatient.id,
+          fecha: formData.fecha,
+          hora: formData.hora,
+          observaciones: formData.observaciones,
+        })
+      } else {
+        await createAppointment({
+          patientId: selectedPatient.id,
+          fecha: formData.fecha,
+          hora: formData.hora,
+          observaciones: formData.observaciones,
+        })
+      }
 
       emitDataChanged()
       onOpenChange(false)
       resetForm()
+      toast({
+        title: appointmentToEdit ? 'Turno actualizado' : 'Turno creado',
+        description: appointmentToEdit
+          ? 'Los cambios del turno se guardaron correctamente.'
+          : 'El turno se guardo correctamente.',
+      })
+    } catch (error) {
+      const formError = getFormErrorState(error, {
+        validationMessage: 'Revisa los datos ingresados',
+        fallbackMessage: appointmentToEdit ? 'No se pudo actualizar el turno' : 'No se pudo guardar el turno',
+      })
+
+      setFieldErrors(formError.fieldErrors)
+      toast({
+        variant: 'destructive',
+        title: appointmentToEdit ? 'No se pudo actualizar el turno' : 'No se pudo guardar el turno',
+        description: formError.message,
+      })
     } finally {
       setLoading(false)
     }
-  }
-
-  const resetForm = () => {
-    setSearchQuery('')
-    setSearchResults([])
-    setSelectedPatient(null)
-    setFormData({
-      fecha: initialDate ?? format(new Date(), 'yyyy-MM-dd'),
-      hora: '09:00',
-      observaciones: ''
-    })
   }
 
   const handlePatientCreated = (patient: Patient) => {
@@ -122,9 +178,11 @@ export function CreateAppointmentModal({ open, onOpenChange, initialDate }: Crea
       <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle>Nuevo turno</DialogTitle>
+            <DialogTitle>{isEditing ? 'Editar turno' : 'Nuevo turno'}</DialogTitle>
             <DialogDescription>
-              Buscá por DNI o apellido, o cargá un paciente mínimo para agendar el control.
+              {isEditing
+                ? 'Modifica paciente, fecha, hora y observaciones del turno.'
+                : 'Busca por DNI o apellido, o carga un paciente minimo para agendar el control.'}
             </DialogDescription>
           </DialogHeader>
 
@@ -238,9 +296,11 @@ export function CreateAppointmentModal({ open, onOpenChange, initialDate }: Crea
                     id="fecha"
                     type="date"
                     value={formData.fecha}
-                    onChange={(e) => setFormData(prev => ({ ...prev, fecha: e.target.value }))}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, fecha: e.target.value }))}
+                    aria-invalid={fieldErrors.fecha?.length ? true : undefined}
                     required
                   />
+                  {fieldErrors.fecha?.length ? <p className="text-sm text-destructive">{fieldErrors.fecha[0]}</p> : null}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="hora">Hora *</Label>
@@ -248,9 +308,11 @@ export function CreateAppointmentModal({ open, onOpenChange, initialDate }: Crea
                     id="hora"
                     type="time"
                     value={formData.hora}
-                    onChange={(e) => setFormData(prev => ({ ...prev, hora: e.target.value }))}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, hora: e.target.value }))}
+                    aria-invalid={fieldErrors.hora?.length ? true : undefined}
                     required
                   />
+                  {fieldErrors.hora?.length ? <p className="text-sm text-destructive">{fieldErrors.hora[0]}</p> : null}
                 </div>
               </div>
 
@@ -259,7 +321,7 @@ export function CreateAppointmentModal({ open, onOpenChange, initialDate }: Crea
                 <Textarea
                   id="observaciones"
                   value={formData.observaciones}
-                  onChange={(e) => setFormData(prev => ({ ...prev, observaciones: e.target.value }))}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, observaciones: e.target.value }))}
                   placeholder="Motivo del control o nota operativa"
                   rows={3}
                 />
@@ -271,7 +333,7 @@ export function CreateAppointmentModal({ open, onOpenChange, initialDate }: Crea
                 Cancelar
               </Button>
               <Button type="submit" disabled={!selectedPatient || loading}>
-                {loading ? 'Guardando...' : 'Guardar turno'}
+                {loading ? 'Guardando...' : isEditing ? 'Guardar cambios' : 'Guardar turno'}
               </Button>
             </DialogFooter>
           </form>
