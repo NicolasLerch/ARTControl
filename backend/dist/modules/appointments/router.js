@@ -30,6 +30,7 @@ appointmentsRouter.get('/', async (req, res, next) => {
     try {
         const query = appointmentQuerySchema.parse(req.query);
         const where = {};
+        where.userId = req.authUser.id;
         if (query.patientId) {
             where.patientId = query.patientId;
         }
@@ -68,6 +69,7 @@ appointmentsRouter.post('/', async (req, res, next) => {
         const payload = appointmentCreateSchema.parse(req.body);
         const appointment = await prisma.appointment.create({
             data: {
+                userId: req.authUser.id,
                 patientId: payload.patientId,
                 fecha: new Date(payload.fecha),
                 hora: payload.hora,
@@ -87,8 +89,9 @@ appointmentsRouter.post('/', async (req, res, next) => {
 });
 appointmentsRouter.get('/:id', async (req, res, next) => {
     try {
-        const appointment = await prisma.appointment.findUnique({
-            where: { id: req.params.id },
+        const appointmentId = String(req.params.id);
+        const appointment = await prisma.appointment.findFirst({
+            where: { id: appointmentId, userId: req.authUser.id },
             include: {
                 patient: true,
             },
@@ -109,9 +112,20 @@ appointmentsRouter.get('/:id', async (req, res, next) => {
 });
 appointmentsRouter.patch('/:id', async (req, res, next) => {
     try {
+        const appointmentId = String(req.params.id);
         const payload = appointmentUpdateSchema.parse(req.body);
+        const existingAppointment = await prisma.appointment.findFirst({
+            where: { id: appointmentId, userId: req.authUser.id },
+            select: { id: true },
+        });
+        if (!existingAppointment) {
+            return res.status(404).json({
+                message: 'Turno no encontrado',
+                code: 'APPOINTMENT_NOT_FOUND',
+            });
+        }
         const appointment = await prisma.appointment.update({
-            where: { id: req.params.id },
+            where: { id: existingAppointment.id },
             data: {
                 ...(payload.patientId ? { patientId: payload.patientId } : {}),
                 ...(payload.fecha ? { fecha: new Date(payload.fecha) } : {}),
@@ -132,9 +146,20 @@ appointmentsRouter.patch('/:id', async (req, res, next) => {
 });
 appointmentsRouter.patch('/:id/status', async (req, res, next) => {
     try {
+        const appointmentId = String(req.params.id);
         const payload = appointmentStatusSchema.parse(req.body);
+        const existingAppointment = await prisma.appointment.findFirst({
+            where: { id: appointmentId, userId: req.authUser.id },
+            select: { id: true },
+        });
+        if (!existingAppointment) {
+            return res.status(404).json({
+                message: 'Turno no encontrado',
+                code: 'APPOINTMENT_NOT_FOUND',
+            });
+        }
         const appointment = await prisma.appointment.update({
-            where: { id: req.params.id },
+            where: { id: existingAppointment.id },
             data: {
                 estado: payload.estado,
                 cancelledAt: payload.estado === 'CANCELADO' ? new Date() : null,
@@ -145,11 +170,15 @@ appointmentsRouter.patch('/:id/status', async (req, res, next) => {
         });
         if (payload.estado === 'ASISTIO') {
             const existingAttendance = await prisma.attendance.findFirst({
-                where: { appointmentId: appointment.id },
+                where: {
+                    appointmentId: appointment.id,
+                    userId: appointment.userId,
+                },
             });
             if (!existingAttendance) {
                 await prisma.attendance.create({
                     data: {
+                        userId: appointment.userId,
                         patientId: appointment.patientId,
                         appointmentId: appointment.id,
                         fechaAtencion: appointment.fecha,
@@ -168,8 +197,19 @@ appointmentsRouter.patch('/:id/status', async (req, res, next) => {
 });
 appointmentsRouter.delete('/:id', async (req, res, next) => {
     try {
+        const appointmentId = String(req.params.id);
+        const existingAppointment = await prisma.appointment.findFirst({
+            where: { id: appointmentId, userId: req.authUser.id },
+            select: { id: true },
+        });
+        if (!existingAppointment) {
+            return res.status(404).json({
+                message: 'Turno no encontrado',
+                code: 'APPOINTMENT_NOT_FOUND',
+            });
+        }
         const appointment = await prisma.appointment.update({
-            where: { id: req.params.id },
+            where: { id: existingAppointment.id },
             data: {
                 estado: 'CANCELADO',
                 cancelledAt: new Date(),

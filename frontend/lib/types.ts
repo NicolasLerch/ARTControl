@@ -79,6 +79,10 @@ export interface PatientTimelineItem {
   hora?: string
   fechaAtencion?: string
   appointmentId?: string | null
+  ownerUserId?: string
+  ownerNombre?: string
+  ownerApellido?: string
+  ownerDisplayName?: string
 }
 
 export interface Medication {

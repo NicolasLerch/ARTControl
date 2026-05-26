@@ -1,20 +1,18 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { format } from 'date-fns'
+import { es } from 'date-fns/locale'
+import { CalendarDays, CalendarPlus, CheckCircle2, Clock, FileText, User, XCircle } from 'lucide-react'
+
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import { getPatientDetail } from '@/lib/api/client'
 import { subscribeDataChanged } from '@/lib/api/events'
 import { Patient, PatientTimelineItem } from '@/lib/types'
-import { format } from 'date-fns'
-import { es } from 'date-fns/locale'
-import {
-  User, FileText, CheckCircle2, XCircle, Clock,
-  CalendarPlus, CalendarDays
-} from 'lucide-react'
 
 interface PatientDetailProps {
   patientId: string
@@ -23,8 +21,8 @@ interface PatientDetailProps {
 
 const appointmentLabels = {
   PENDIENTE: { icon: Clock, className: 'bg-warning/20 text-warning-foreground border-warning/30', label: 'Turno pendiente' },
-  ASISTIO: { icon: CheckCircle2, className: 'bg-success/20 text-success border-success/30', label: 'Asistió' },
-  NO_ASISTIO: { icon: XCircle, className: 'bg-destructive/20 text-destructive border-destructive/30', label: 'No asistió' },
+  ASISTIO: { icon: CheckCircle2, className: 'bg-success/20 text-success border-success/30', label: 'Asistio' },
+  NO_ASISTIO: { icon: XCircle, className: 'bg-destructive/20 text-destructive border-destructive/30', label: 'No asistio' },
   CANCELADO: { icon: XCircle, className: 'bg-muted text-muted-foreground border-border', label: 'Cancelado' },
 } as const
 
@@ -34,7 +32,7 @@ function TimelineEntry({ item }: { item: PatientTimelineItem }) {
     : {
         icon: FileText,
         className: 'bg-primary/20 text-primary border-primary/30',
-        label: 'Atención registrada',
+        label: 'Atencion registrada',
       }
 
   const Icon = config.icon
@@ -54,6 +52,11 @@ function TimelineEntry({ item }: { item: PatientTimelineItem }) {
             {format(new Date(item.dateTime), "d MMM yyyy - HH:mm", { locale: es })}
           </span>
         </div>
+        {item.ownerDisplayName ? (
+          <p className="mt-2 text-xs text-muted-foreground">
+            Registrado por {item.ownerDisplayName}
+          </p>
+        ) : null}
         {item.observaciones ? (
           <p className="mt-2 text-sm">{item.observaciones}</p>
         ) : (
@@ -80,7 +83,7 @@ export function PatientDetail({ patientId, onScheduleAppointment }: PatientDetai
       }
     }
 
-    loadDetail()
+    void loadDetail()
     const unsubscribe = subscribeDataChanged(loadDetail)
 
     return () => {
@@ -125,7 +128,7 @@ export function PatientDetail({ patientId, onScheduleAppointment }: PatientDetai
         <div className="grid h-full grid-cols-1 gap-6 lg:grid-cols-2">
           <div className="space-y-6">
             <div>
-              <h3 className="mb-3 text-sm font-medium text-muted-foreground">Datos básicos</h3>
+              <h3 className="mb-3 text-sm font-medium text-muted-foreground">Datos basicos</h3>
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-sm">
                   <User className="h-4 w-4 text-muted-foreground" />
@@ -147,7 +150,7 @@ export function PatientDetail({ patientId, onScheduleAppointment }: PatientDetai
             <div>
               <h3 className="mb-3 text-sm font-medium text-muted-foreground">Alcance MVP</h3>
               <p className="text-sm text-muted-foreground">
-                Este turnero sólo conserva identificación mínima y el historial operativo de turnos y atenciones.
+                Este turnero solo conserva identificacion minima y el historial operativo compartido de turnos y atenciones.
               </p>
             </div>
           </div>
@@ -163,7 +166,7 @@ export function PatientDetail({ patientId, onScheduleAppointment }: PatientDetai
                     <FileText className="h-6 w-6 text-muted-foreground" />
                   </div>
                   <p className="mt-3 text-sm text-muted-foreground">
-                    Sin historial todavía
+                    Sin historial todavia
                   </p>
                 </div>
               ) : (

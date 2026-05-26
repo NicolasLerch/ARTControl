@@ -2,10 +2,12 @@ import { Router } from 'express';
 import { prisma } from '../../lib/prisma.js';
 import { attendanceCreateSchema, attendanceQuerySchema, attendanceUpdateSchema } from '../../schemas/attendances.js';
 import { endOfDay, startOfDay } from '../../lib/dates.js';
+import type { AuthedRequest } from '../../middlewares/auth.js';
 
 function serializeAttendance(
   attendance: {
     id: string;
+    userId: string;
     patientId: string;
     appointmentId: string | null;
     fechaAtencion: Date;
@@ -34,10 +36,12 @@ function serializeAttendance(
 
 export const attendancesRouter = Router();
 
-attendancesRouter.get('/', async (req, res, next) => {
+attendancesRouter.get('/', async (req: AuthedRequest, res, next) => {
   try {
     const query = attendanceQuerySchema.parse(req.query);
     const where: Record<string, unknown> = {};
+
+    where.userId = req.authUser!.id;
 
     if (query.patientId) {
       where.patientId = query.patientId;
@@ -80,10 +84,11 @@ attendancesRouter.get('/', async (req, res, next) => {
   }
 });
 
-attendancesRouter.get('/today', async (_req, res, next) => {
+attendancesRouter.get('/today', async (req: AuthedRequest, res, next) => {
   try {
     const attendances = await prisma.attendance.findMany({
       where: {
+        userId: req.authUser!.id,
         fechaAtencion: {
           gte: startOfDay(new Date()),
           lte: endOfDay(new Date()),
@@ -112,11 +117,41 @@ attendancesRouter.get('/today', async (_req, res, next) => {
   }
 });
 
-attendancesRouter.post('/', async (req, res, next) => {
+attendancesRouter.post('/', async (req: AuthedRequest, res, next) => {
   try {
     const payload = attendanceCreateSchema.parse(req.body);
+
+    if (payload.appointmentId) {
+      const linkedAppointment = await prisma.appointment.findFirst({
+        where: {
+          id: payload.appointmentId,
+          userId: req.authUser!.id,
+        },
+        select: {
+          id: true,
+          patientId: true,
+          userId: true,
+        },
+      });
+
+      if (!linkedAppointment) {
+        return res.status(404).json({
+          message: 'Turno no encontrado',
+          code: 'APPOINTMENT_NOT_FOUND',
+        });
+      }
+
+      if (linkedAppointment.patientId !== payload.patientId) {
+        return res.status(400).json({
+          message: 'La atencion debe corresponder al mismo paciente del turno',
+          code: 'ATTENDANCE_APPOINTMENT_MISMATCH',
+        });
+      }
+    }
+
     const attendance = await prisma.attendance.create({
       data: {
+        userId: req.authUser!.id,
         patientId: payload.patientId,
         appointmentId: payload.appointmentId ?? null,
         fechaAtencion: new Date(payload.fechaAtencion),
@@ -142,11 +177,53 @@ attendancesRouter.post('/', async (req, res, next) => {
   }
 });
 
-attendancesRouter.patch('/:id', async (req, res, next) => {
+attendancesRouter.patch('/:id', async (req: AuthedRequest, res, next) => {
   try {
+    const attendanceId = String(req.params.id);
     const payload = attendanceUpdateSchema.parse(req.body);
+    const existingAttendance = await prisma.attendance.findFirst({
+      where: { id: attendanceId, userId: req.authUser!.id },
+      select: {
+        id: true,
+        appointmentId: true,
+      },
+    });
+
+    if (!existingAttendance) {
+      return res.status(404).json({
+        message: 'Atencion no encontrada',
+        code: 'ATTENDANCE_NOT_FOUND',
+      });
+    }
+
+    if (existingAttendance.appointmentId && payload.patientId) {
+      const linkedAppointment = await prisma.appointment.findFirst({
+        where: {
+          id: existingAttendance.appointmentId,
+          userId: req.authUser!.id,
+        },
+        select: {
+          patientId: true,
+        },
+      });
+
+      if (!linkedAppointment) {
+        return res.status(404).json({
+          message: 'Turno no encontrado',
+          code: 'APPOINTMENT_NOT_FOUND',
+        });
+      }
+
+      if (linkedAppointment.patientId !== payload.patientId) {
+        return res.status(400).json({
+          message: 'La atencion debe corresponder al mismo paciente del turno',
+          code: 'ATTENDANCE_APPOINTMENT_MISMATCH',
+        });
+      }
+    }
+
     const attendance = await prisma.attendance.update({
-      where: { id: req.params.id },
+      where: { id: existingAttendance.id },
       data: {
         ...(payload.patientId ? { patientId: payload.patientId } : {}),
         ...(payload.fechaAtencion ? { fechaAtencion: new Date(payload.fechaAtencion) } : {}),
@@ -172,10 +249,14 @@ attendancesRouter.patch('/:id', async (req, res, next) => {
   }
 });
 
-attendancesRouter.delete('/:id', async (req, res, next) => {
+attendancesRouter.delete('/:id', async (req: AuthedRequest, res, next) => {
   try {
-    const attendance = await prisma.attendance.findUnique({
-      where: { id: req.params.id },
+    const attendanceId = String(req.params.id);
+    const attendance = await prisma.attendance.findFirst({
+      where: {
+        id: attendanceId,
+        userId: req.authUser!.id,
+      },
       select: {
         id: true,
         appointmentId: true,
