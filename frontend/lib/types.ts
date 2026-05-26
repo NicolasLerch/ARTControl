@@ -3,9 +3,23 @@ export type UserRole = 'ADMIN' | 'USER'
 
 export interface AuthUser {
   id: string
+  nombre: string
+  apellido: string
   email: string
   role: UserRole
   totpEnabled: boolean
+}
+
+export interface ManagedUser {
+  id: string
+  nombre: string
+  apellido: string
+  email: string
+  role: UserRole
+  totpEnabled: boolean
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
 }
 
 export interface Patient {
@@ -65,6 +79,10 @@ export interface PatientTimelineItem {
   hora?: string
   fechaAtencion?: string
   appointmentId?: string | null
+  ownerUserId?: string
+  ownerNombre?: string
+  ownerApellido?: string
+  ownerDisplayName?: string
 }
 
 export interface Medication {

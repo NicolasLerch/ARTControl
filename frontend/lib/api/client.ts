@@ -1,6 +1,6 @@
 'use client'
 
-import { Appointment, AppointmentStatus, Art, ArtPharmacyCoverage, AttendanceRecord, AuthUser, Medication, Patient, PatientTimelineItem, Pharmacy, PharmacyBranch } from '@/lib/types'
+import { Appointment, AppointmentStatus, Art, ArtPharmacyCoverage, AttendanceRecord, AuthUser, ManagedUser, Medication, Patient, PatientTimelineItem, Pharmacy, PharmacyBranch } from '@/lib/types'
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'
 
@@ -236,23 +236,57 @@ function mapArtPharmacyCoverage(coverage: {
   return coverage
 }
 
+function mapAuthUser(user: {
+  id: string
+  nombre: string
+  apellido: string
+  email: string
+  role: 'ADMIN' | 'USER'
+  totpEnabled: boolean
+}): AuthUser {
+  return user
+}
+
+function mapManagedUser(user: {
+  id: string
+  nombre: string
+  apellido: string
+  email: string
+  role: 'ADMIN' | 'USER'
+  totpEnabled: boolean
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
+}): ManagedUser {
+  return user
+}
+
 export async function getCurrentUser() {
   const data = await request<{ user: AuthUser }>('/auth/me')
-  return data.user
+  return mapAuthUser(data.user)
 }
 
 export async function login(email: string, password: string) {
-  return request<{ requires2fa?: boolean; challengeId?: string; user?: AuthUser }>('/auth/login', {
+  const data = await request<{ requires2fa?: boolean; challengeId?: string; user?: AuthUser }>('/auth/login', {
     method: 'POST',
     body: JSON.stringify({ email, password }),
   })
+
+  return {
+    ...data,
+    user: data.user ? mapAuthUser(data.user) : undefined,
+  }
 }
 
 export async function verifyTwoFactor(challengeId: string, token: string) {
-  return request<{ user: AuthUser }>('/auth/verify-2fa', {
+  const data = await request<{ user: AuthUser }>('/auth/verify-2fa', {
     method: 'POST',
     body: JSON.stringify({ challengeId, token }),
   })
+
+  return {
+    user: mapAuthUser(data.user),
+  }
 }
 
 export async function logout() {
@@ -268,10 +302,14 @@ export async function setupTwoFactor() {
 }
 
 export async function confirmTwoFactor(token: string) {
-  return request<{ user: AuthUser }>('/auth/confirm-2fa', {
+  const data = await request<{ user: AuthUser }>('/auth/confirm-2fa', {
     method: 'POST',
     body: JSON.stringify({ token }),
   })
+
+  return {
+    user: mapAuthUser(data.user),
+  }
 }
 
 export async function listPatients(params: {
@@ -460,6 +498,55 @@ export async function deleteAttendance(attendanceId: string) {
   return request<void>(`/attendances/${attendanceId}`, {
     method: 'DELETE',
   })
+}
+
+export async function listUsers(params: {
+  q?: string
+  isActive?: boolean
+} = {}) {
+  const data = await request<{ items: Array<Parameters<typeof mapManagedUser>[0]> }>('/users', {
+    query: params,
+  })
+
+  return data.items.map(mapManagedUser)
+}
+
+export async function createUser(payload: {
+  nombre: string
+  apellido: string
+  email: string
+  password: string
+  role: 'ADMIN' | 'USER'
+}) {
+  const data = await request<{ user: Parameters<typeof mapManagedUser>[0] }>('/users', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+
+  return mapManagedUser(data.user)
+}
+
+export async function updateUser(id: string, payload: {
+  nombre?: string
+  apellido?: string
+  email?: string
+  role?: 'ADMIN' | 'USER'
+  isActive?: boolean
+}) {
+  const data = await request<{ user: Parameters<typeof mapManagedUser>[0] }>(`/users/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  })
+
+  return mapManagedUser(data.user)
+}
+
+export async function deleteUser(id: string) {
+  const data = await request<{ user: Parameters<typeof mapManagedUser>[0] }>(`/users/${id}`, {
+    method: 'DELETE',
+  })
+
+  return mapManagedUser(data.user)
 }
 
 export async function listPharmacyCoverages(params: {

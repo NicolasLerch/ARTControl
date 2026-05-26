@@ -9,6 +9,7 @@ import { appointmentsRouter } from '../modules/appointments/router.js';
 import { attendancesRouter } from '../modules/attendances/router.js';
 import { vademecumRouter } from '../modules/vademecum/router.js';
 import { pharmaciesRouter } from '../modules/pharmacies/router.js';
+import { usersRouter } from '../modules/users/router.js';
 import { requireAuth } from '../middlewares/auth.js';
 // const loginLimiter = rateLimit({
 //   windowMs: 15 * 60 * 1000,
@@ -38,6 +39,7 @@ export function createApp() {
     app.use('/attendances', requireAuth, attendancesRouter);
     app.use('/vademecum', requireAuth, vademecumRouter);
     app.use('/pharmacies', requireAuth, pharmaciesRouter);
+    app.use('/users', requireAuth, usersRouter);
     app.use(notFoundHandler);
     app.use(errorHandler);
     return app;

@@ -96,8 +96,28 @@ patientsRouter.get('/:id', async (req, res, next) => {
     const patient = await prisma.patient.findUnique({
       where: { id: req.params.id },
       include: {
-        appointments: true,
-        attendances: true,
+        appointments: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                nombre: true,
+                apellido: true,
+              },
+            },
+          },
+        },
+        attendances: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                nombre: true,
+                apellido: true,
+              },
+            },
+          },
+        },
       },
     });
 
@@ -118,6 +138,10 @@ patientsRouter.get('/:id', async (req, res, next) => {
         estado: appointment.estado,
         fecha: appointment.fecha.toISOString(),
         hora: appointment.hora,
+        ownerUserId: appointment.user.id,
+        ownerNombre: appointment.user.nombre,
+        ownerApellido: appointment.user.apellido,
+        ownerDisplayName: `${appointment.user.nombre} ${appointment.user.apellido}`,
       })),
       ...patient.attendances.map((attendance: typeof patient.attendances[number]) => ({
         id: attendance.id,
@@ -127,6 +151,10 @@ patientsRouter.get('/:id', async (req, res, next) => {
         observaciones: attendance.observaciones,
         fechaAtencion: attendance.fechaAtencion.toISOString(),
         appointmentId: attendance.appointmentId,
+        ownerUserId: attendance.user.id,
+        ownerNombre: attendance.user.nombre,
+        ownerApellido: attendance.user.apellido,
+        ownerDisplayName: `${attendance.user.nombre} ${attendance.user.apellido}`,
       })),
     ].sort((a, b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime());
 

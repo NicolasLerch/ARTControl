@@ -1,23 +1,30 @@
 'use client'
 
+import { Building2, CalendarDays, Pill, ShieldCheck, Stethoscope, UserCheck, Users } from 'lucide-react'
+
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { CalendarDays, Users, UserCheck, Pill, Building2, Stethoscope } from 'lucide-react'
+import { UserRole } from '@/lib/types'
 
 interface NavigationProps {
   activeTab: string
   onTabChange: (tab: string) => void
+  userRole: UserRole
 }
 
-const tabs = [
+const baseTabs = [
   { value: 'turnos', label: 'Turnos', icon: CalendarDays },
   { value: 'pacientes', label: 'Pacientes', icon: Users },
   { value: 'atendidos', label: 'Atendidos hoy', icon: UserCheck },
-  { value: 'vademecum', label: 'Vademécum', icon: Pill },
+  { value: 'vademecum', label: 'Vademecum', icon: Pill },
   { value: 'farmacias', label: 'Farmacias', icon: Building2 },
   { value: 'especialistas', label: 'Especialistas', icon: Stethoscope },
 ]
 
-export function Navigation({ activeTab, onTabChange }: NavigationProps) {
+export function Navigation({ activeTab, onTabChange, userRole }: NavigationProps) {
+  const tabs = userRole === 'ADMIN'
+    ? [...baseTabs, { value: 'usuarios', label: 'Usuarios', icon: ShieldCheck }]
+    : baseTabs
+
   return (
     <div className="border-b border-border bg-background">
       <div className="px-6">
