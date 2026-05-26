@@ -11,6 +11,8 @@ const SESSION_DURATION_MS = 1000 * 60 * 60 * 24 * 7;
 function serializeAuthUser(user) {
     return {
         id: user.id,
+        nombre: user.nombre,
+        apellido: user.apellido,
         email: user.email,
         role: user.role,
         totpEnabled: user.totpEnabled,

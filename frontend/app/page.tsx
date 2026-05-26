@@ -1,20 +1,15 @@
 'use client'
 
-import { useState, startTransition } from 'react'
+import { startTransition, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { format } from 'date-fns'
+
+import { CreateAppointmentModal } from '@/components/appointments/create-appointment-modal'
+import { DashboardContent } from '@/components/dashboard/dashboard-content'
 import { Header } from '@/components/layout/header'
 import { Navigation } from '@/components/layout/navigation'
-import { AppointmentsDashboard } from '@/components/appointments/appointments-dashboard'
-import { CreateAppointmentModal } from '@/components/appointments/create-appointment-modal'
-import { PatientsList } from '@/components/patients/patients-list'
-import { AttendedToday } from '@/components/attended/attended-today'
-import { ComingSoonPanel } from '@/components/shared/coming-soon-panel'
-import { Vademecum } from '@/components/vademecum/vademecum'
-import { PharmaciesList } from '@/components/pharmacies/pharmacies-list'
-import { TwoFactorSetupCard } from '@/components/auth/two-factor-setup-card'
-import { useAuthSession } from '@/lib/hooks/use-auth-session'
 import { logout } from '@/lib/api/client'
-import { format } from 'date-fns'
+import { useAuthSession } from '@/lib/hooks/use-auth-session'
 
 export default function HomePage() {
   const router = useRouter()
@@ -22,7 +17,6 @@ export default function HomePage() {
   const [activeTab, setActiveTab] = useState('turnos')
   const [showAddAppointment, setShowAddAppointment] = useState(false)
   const [appointmentDefaultDate, setAppointmentDefaultDate] = useState(() => format(new Date(), 'yyyy-MM-dd'))
-  const currentUserRole = user?.role ?? 'USER'
 
   const handleLogout = async () => {
     await logout()
@@ -30,34 +24,6 @@ export default function HomePage() {
       setUser(null)
       router.replace('/login')
     })
-  }
-
-  const renderContent = () => {
-    switch (activeTab) {
-      case 'turnos':
-        return <AppointmentsDashboard onAddAppointment={(date) => {
-          setAppointmentDefaultDate(format(date, 'yyyy-MM-dd'))
-          setShowAddAppointment(true)
-        }} />
-      case 'pacientes':
-        return <PatientsList onAddAppointment={() => {
-          setAppointmentDefaultDate(format(new Date(), 'yyyy-MM-dd'))
-          setShowAddAppointment(true)
-        }} />
-      case 'atendidos':
-        return <AttendedToday />
-      case 'vademecum':
-        return <Vademecum userRole={currentUserRole} />
-      case 'farmacias':
-        return <PharmaciesList userRole={currentUserRole} />
-      case 'especialistas':
-        return <ComingSoonPanel title="Horarios especialistas" description="La agenda de especialistas queda marcada como proxima funcionalidad." />
-      default:
-        return <AppointmentsDashboard onAddAppointment={(date) => {
-          setAppointmentDefaultDate(format(date, 'yyyy-MM-dd'))
-          setShowAddAppointment(true)
-        }} />
-    }
   }
 
   if (loading || !user) {
@@ -71,13 +37,18 @@ export default function HomePage() {
   return (
     <div className="flex min-h-screen flex-col">
       <Header user={user} onLogout={handleLogout} />
-      <Navigation activeTab={activeTab} onTabChange={setActiveTab} />
+      <Navigation activeTab={activeTab} onTabChange={setActiveTab} userRole={user.role} />
 
       <main className="flex-1 overflow-hidden p-6">
-        <div className="mx-auto h-full max-w-[1600px]">
-          <TwoFactorSetupCard user={user} onEnabled={setUser} />
-          {renderContent()}
-        </div>
+        <DashboardContent
+          activeTab={activeTab}
+          user={user}
+          onAddAppointment={(date) => {
+            setAppointmentDefaultDate(date)
+            setShowAddAppointment(true)
+          }}
+          onUserUpdated={setUser}
+        />
       </main>
 
       <CreateAppointmentModal

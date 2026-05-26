@@ -30,6 +30,8 @@ export async function requireAuth(req, res, next) {
     req.authSessionId = session.id;
     req.authUser = {
         id: session.user.id,
+        nombre: session.user.nombre,
+        apellido: session.user.apellido,
         email: session.user.email,
         role: session.user.role,
         totpEnabled: session.user.totpEnabled,

@@ -7,6 +7,8 @@ const prisma = new PrismaClient();
 async function main() {
   const email = process.env.SEED_ADMIN_EMAIL;
   const password = process.env.SEED_ADMIN_PASSWORD;
+  const nombre = process.env.SEED_ADMIN_NOMBRE ?? 'Admin';
+  const apellido = process.env.SEED_ADMIN_APELLIDO ?? 'Sistema';
 
   if (!email || !password) {
     throw new Error('SEED_ADMIN_EMAIL y SEED_ADMIN_PASSWORD son obligatorios');
@@ -17,11 +19,15 @@ async function main() {
   await prisma.user.upsert({
     where: { email: email.toLowerCase() },
     update: {
+      nombre,
+      apellido,
       passwordHash,
       role: Role.ADMIN,
       isActive: true,
     },
     create: {
+      nombre,
+      apellido,
       email: email.toLowerCase(),
       passwordHash,
       role: Role.ADMIN,
