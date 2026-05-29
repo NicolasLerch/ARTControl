@@ -13,6 +13,7 @@ import { Separator } from '@/components/ui/separator'
 import { getPatientDetail } from '@/lib/api/client'
 import { subscribeDataChanged } from '@/lib/api/events'
 import { Patient, PatientTimelineItem } from '@/lib/types'
+import { CreatePatientModal } from './create-patient-modal'
 
 interface PatientDetailProps {
   patientId: string
@@ -70,6 +71,7 @@ function TimelineEntry({ item }: { item: PatientTimelineItem }) {
 export function PatientDetail({ patientId, onScheduleAppointment }: PatientDetailProps) {
   const [patient, setPatient] = useState<Patient | null>(null)
   const [timeline, setTimeline] = useState<PatientTimelineItem[]>([])
+  const [showEditModal, setShowEditModal] = useState(false)
 
   useEffect(() => {
     let active = true
@@ -101,9 +103,10 @@ export function PatientDetail({ patientId, onScheduleAppointment }: PatientDetai
   }
 
   return (
-    <Card className="flex h-full flex-col">
-      <CardHeader className="flex-shrink-0 pb-4">
-        <div className="flex items-start justify-between">
+    <>
+      <Card className="flex h-full flex-col">
+        <CardHeader className="flex-shrink-0 pb-4">
+          <div className="flex items-start justify-between gap-3">
           <div className="flex items-start gap-4">
             <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary">
               <User className="h-7 w-7" />
@@ -117,70 +120,83 @@ export function PatientDetail({ patientId, onScheduleAppointment }: PatientDetai
               </p>
             </div>
           </div>
-          <Button onClick={onScheduleAppointment}>
-            <CalendarPlus className="mr-2 h-4 w-4" />
-            Citar control
-          </Button>
-        </div>
-      </CardHeader>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" onClick={() => setShowEditModal(true)}>
+                Editar paciente
+              </Button>
+              <Button onClick={onScheduleAppointment}>
+                <CalendarPlus className="mr-2 h-4 w-4" />
+                Citar control
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
 
-      <CardContent className="flex-1 overflow-hidden">
-        <div className="grid h-full grid-cols-1 gap-6 lg:grid-cols-2">
-          <div className="space-y-6">
-            <div>
-              <h3 className="mb-3 text-sm font-medium text-muted-foreground">Datos basicos</h3>
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-sm">
-                  <User className="h-4 w-4 text-muted-foreground" />
-                  <span>{patient.nombre} {patient.apellido}</span>
+        <CardContent className="flex-1 overflow-hidden">
+          <div className="grid h-full grid-cols-1 gap-6 lg:grid-cols-2">
+            <div className="space-y-6">
+              <div>
+                <h3 className="mb-3 text-sm font-medium text-muted-foreground">Datos basicos</h3>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm">
+                    <User className="h-4 w-4 text-muted-foreground" />
+                    <span>{patient.nombre} {patient.apellido}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <FileText className="h-4 w-4 text-muted-foreground" />
+                    <span>DNI {patient.dni}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <CalendarDays className="h-4 w-4 text-muted-foreground" />
+                    <span>Alta en turnero: {format(new Date(patient.createdAt), "d 'de' MMMM, yyyy", { locale: es })}</span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <FileText className="h-4 w-4 text-muted-foreground" />
-                  <span>DNI {patient.dni}</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <CalendarDays className="h-4 w-4 text-muted-foreground" />
-                  <span>Alta en turnero: {format(new Date(patient.createdAt), "d 'de' MMMM, yyyy", { locale: es })}</span>
-                </div>
+              </div>
+
+              <Separator />
+
+              <div>
+                <h3 className="mb-3 text-sm font-medium text-muted-foreground">Alcance MVP</h3>
+                <p className="text-sm text-muted-foreground">
+                  Este turnero solo conserva identificacion minima y el historial operativo compartido de turnos y atenciones.
+                </p>
               </div>
             </div>
 
-            <Separator />
-
-            <div>
-              <h3 className="mb-3 text-sm font-medium text-muted-foreground">Alcance MVP</h3>
-              <p className="text-sm text-muted-foreground">
-                Este turnero solo conserva identificacion minima y el historial operativo compartido de turnos y atenciones.
-              </p>
+            <div className="flex flex-col">
+              <h3 className="mb-3 text-sm font-medium text-muted-foreground">
+                Timeline de atenciones y turnos
+              </h3>
+              <ScrollArea className="flex-1">
+                {timeline.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-8 text-center">
+                    <div className="rounded-full bg-muted p-3">
+                      <FileText className="h-6 w-6 text-muted-foreground" />
+                    </div>
+                    <p className="mt-3 text-sm text-muted-foreground">
+                      Sin historial todavia
+                    </p>
+                  </div>
+                ) : (
+                  <div className="relative space-y-4 pl-6">
+                    <div className="absolute bottom-2 left-[9px] top-2 w-px bg-border" />
+                    {timeline.map((record) => (
+                      <TimelineEntry key={`${record.type}-${record.id}`} item={record} />
+                    ))}
+                  </div>
+                )}
+              </ScrollArea>
             </div>
           </div>
+        </CardContent>
+      </Card>
 
-          <div className="flex flex-col">
-            <h3 className="mb-3 text-sm font-medium text-muted-foreground">
-              Timeline de atenciones y turnos
-            </h3>
-            <ScrollArea className="flex-1">
-              {timeline.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-8 text-center">
-                  <div className="rounded-full bg-muted p-3">
-                    <FileText className="h-6 w-6 text-muted-foreground" />
-                  </div>
-                  <p className="mt-3 text-sm text-muted-foreground">
-                    Sin historial todavia
-                  </p>
-                </div>
-              ) : (
-                <div className="relative space-y-4 pl-6">
-                  <div className="absolute bottom-2 left-[9px] top-2 w-px bg-border" />
-                  {timeline.map((record) => (
-                    <TimelineEntry key={`${record.type}-${record.id}`} item={record} />
-                  ))}
-                </div>
-              )}
-            </ScrollArea>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+      <CreatePatientModal
+        open={showEditModal}
+        onOpenChange={setShowEditModal}
+        patientToEdit={patient}
+        onPatientCreated={setPatient}
+      />
+    </>
   )
 }
