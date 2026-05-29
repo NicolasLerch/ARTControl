@@ -221,7 +221,7 @@ appointmentsRouter.patch('/:id/status', async (req: AuthedRequest, res, next) =>
             userId: appointment.userId,
             patientId: appointment.patientId,
             appointmentId: appointment.id,
-            fechaAtencion: appointment.fecha,
+            fechaAtencion: new Date(),
             observaciones: appointment.observaciones,
           },
         });
