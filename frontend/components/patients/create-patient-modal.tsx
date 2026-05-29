@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button'
 import { Field, FieldError, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { createPatient, updatePatient } from '@/lib/api/client'
+import { emitDataChanged } from '@/lib/api/events'
 import { getFormErrorState, type FormFieldErrors } from '@/lib/forms'
 import { Patient } from '@/lib/types'
 import { toast } from '@/hooks/use-toast'
@@ -82,9 +83,16 @@ export function CreatePatientModal({
         : await createPatient(formData)
 
       onPatientCreated?.(savedPatient)
+      emitDataChanged()
       onOpenChange(false)
       setFieldErrors({})
       setFormData(emptyFormData)
+      toast({
+        title: patientToEdit ? 'Paciente actualizado' : 'Paciente creado',
+        description: patientToEdit
+          ? 'Los datos del paciente se guardaron correctamente.'
+          : 'El paciente se guardo correctamente.',
+      })
     } catch (error) {
       const formError = getFormErrorState(error, {
         validationMessage: 'Revisa los datos ingresados',
