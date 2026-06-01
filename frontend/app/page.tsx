@@ -47,7 +47,6 @@ export default function HomePage() {
             setAppointmentDefaultDate(date)
             setShowAddAppointment(true)
           }}
-          onUserUpdated={setUser}
         />
       </main>
 

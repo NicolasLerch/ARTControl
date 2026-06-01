@@ -2,7 +2,6 @@
 
 import { format } from 'date-fns'
 
-import { TwoFactorSetupCard } from '@/components/auth/two-factor-setup-card'
 import { AppointmentsDashboard } from '@/components/appointments/appointments-dashboard'
 import { AttendedToday } from '@/components/attended/attended-today'
 import { PatientsList } from '@/components/patients/patients-list'
@@ -16,10 +15,9 @@ interface DashboardContentProps {
   activeTab: string
   user: AuthUser
   onAddAppointment: (date: string) => void
-  onUserUpdated: (user: AuthUser) => void
 }
 
-export function DashboardContent({ activeTab, user, onAddAppointment, onUserUpdated }: DashboardContentProps) {
+export function DashboardContent({ activeTab, user, onAddAppointment }: DashboardContentProps) {
   const currentUserRole = user.role
 
   const renderContent = () => {
@@ -45,7 +43,6 @@ export function DashboardContent({ activeTab, user, onAddAppointment, onUserUpda
 
   return (
     <div className="mx-auto h-full max-w-[1600px]">
-      <TwoFactorSetupCard user={user} onEnabled={onUserUpdated} />
       {renderContent()}
     </div>
   )
