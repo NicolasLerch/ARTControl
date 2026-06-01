@@ -1,9 +1,11 @@
 'use client'
 
 import { useTheme } from 'next-themes'
+import { Sun, Moon, LogOut, ShieldCheck } from 'lucide-react'
+
 import { AuthUser } from '@/lib/types'
-import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,7 +13,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Sun, Moon, LogOut, ShieldCheck } from 'lucide-react'
 
 interface HeaderProps {
   user: AuthUser
@@ -50,9 +51,7 @@ export function Header({ user, onLogout }: HeaderProps) {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-9 w-9 rounded-full">
                 <Avatar className="h-8 w-8">
-                  <AvatarFallback className="bg-primary/10 text-primary">
-                    {initials}
-                  </AvatarFallback>
+                  <AvatarFallback className="bg-primary/10 text-primary">{initials}</AvatarFallback>
                 </Avatar>
               </Button>
             </DropdownMenuTrigger>
@@ -63,20 +62,18 @@ export function Header({ user, onLogout }: HeaderProps) {
                     {user.nombre} {user.apellido}
                   </p>
                   <p className="font-medium">{user.email}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {user.role} {user.totpEnabled ? '• 2FA activo' : '• 2FA pendiente'}
-                  </p>
+                  <p className="text-xs text-muted-foreground">{user.role}</p>
                 </div>
               </div>
               <DropdownMenuSeparator />
               <DropdownMenuItem disabled>
                 <ShieldCheck className="mr-2 h-4 w-4" />
-                Sesión protegida por cookies httpOnly
+                Sesion protegida por cookies httpOnly
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={onLogout}>
                 <LogOut className="mr-2 h-4 w-4" />
-                Cerrar sesión
+                Cerrar sesion
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
