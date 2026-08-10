@@ -68,9 +68,23 @@ model Patient {
   updatedAt    DateTime      @updatedAt
   appointments Appointment[]
   attendances  Attendance[]
+  cases        PatientCase[]
 
   @@index([apellido])
   @@index([dni])
+}
+
+model PatientCase {
+  id              String   @id @default(cuid())
+  patientId       String
+  art             String
+  numeroSiniestro String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  patient         Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@index([patientId])
+  @@index([patientId, createdAt])
 }
 
 model Art {
