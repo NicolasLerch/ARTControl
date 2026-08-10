@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { CalendarDays, CalendarPlus, CheckCircle2, Clock, FileText, User, XCircle } from 'lucide-react'
+import { BriefcaseMedical, CalendarDays, CalendarPlus, CheckCircle2, Clock, FileText, Pencil, Plus, User, XCircle } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -12,8 +12,10 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import { getPatientDetail } from '@/lib/api/client'
 import { subscribeDataChanged } from '@/lib/api/events'
-import { Patient, PatientTimelineItem } from '@/lib/types'
+import { Patient, PatientCase, PatientTimelineItem } from '@/lib/types'
 import { CreatePatientModal } from './create-patient-modal'
+import { PatientCaseModal } from './patient-case-modal'
+import { PrescriptionModal } from './prescription-modal'
 
 interface PatientDetailProps {
   patientId: string
@@ -70,23 +72,35 @@ function TimelineEntry({ item }: { item: PatientTimelineItem }) {
 
 export function PatientDetail({ patientId, onScheduleAppointment }: PatientDetailProps) {
   const [patient, setPatient] = useState<Patient | null>(null)
+  const [cases, setCases] = useState<PatientCase[]>([])
   const [timeline, setTimeline] = useState<PatientTimelineItem[]>([])
   const [showEditModal, setShowEditModal] = useState(false)
+  const [showCaseModal, setShowCaseModal] = useState(false)
+  const [showPrescriptionModal, setShowPrescriptionModal] = useState(false)
+  const [caseToEdit, setCaseToEdit] = useState<PatientCase | null>(null)
+
+  const loadDetail = async () => {
+    const data = await getPatientDetail(patientId)
+    setPatient(data.patient)
+    setCases(data.cases)
+    setTimeline(data.timeline)
+  }
 
   useEffect(() => {
     let active = true
 
-    const loadDetail = async () => {
+    const loadScopedDetail = async () => {
       const data = await getPatientDetail(patientId)
 
       if (active) {
         setPatient(data.patient)
+        setCases(data.cases)
         setTimeline(data.timeline)
       }
     }
 
-    void loadDetail()
-    const unsubscribe = subscribeDataChanged(loadDetail)
+    void loadScopedDetail()
+    const unsubscribe = subscribeDataChanged(loadScopedDetail)
 
     return () => {
       active = false
@@ -124,6 +138,9 @@ export function PatientDetail({ patientId, onScheduleAppointment }: PatientDetai
               <Button variant="outline" onClick={() => setShowEditModal(true)}>
                 Editar paciente
               </Button>
+              <Button variant="outline" onClick={() => setShowPrescriptionModal(true)}>
+                Generar receta
+              </Button>
               <Button onClick={onScheduleAppointment}>
                 <CalendarPlus className="mr-2 h-4 w-4" />
                 Citar control
@@ -151,6 +168,63 @@ export function PatientDetail({ patientId, onScheduleAppointment }: PatientDetai
                     <span>Alta en turnero: {format(new Date(patient.createdAt), "d 'de' MMMM, yyyy", { locale: es })}</span>
                   </div>
                 </div>
+              </div>
+
+              <Separator />
+
+              <div>
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <h3 className="text-sm font-medium text-muted-foreground">Casos del paciente</h3>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setCaseToEdit(null)
+                      setShowCaseModal(true)
+                    }}
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Nuevo caso
+                  </Button>
+                </div>
+
+                {cases.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground">
+                    Este paciente todavia no tiene casos cargados. Agrega uno para poder emitir recetas.
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {cases.map((patientCase) => (
+                      <div key={patientCase.id} className="rounded-xl border border-border bg-muted/20 p-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2 text-sm font-medium">
+                              <BriefcaseMedical className="h-4 w-4 text-muted-foreground" />
+                              <span>{patientCase.art}</span>
+                            </div>
+                            <p className="text-sm text-muted-foreground">
+                              N° de siniestro: {patientCase.numeroSiniestro}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              Alta del caso: {format(new Date(patientCase.createdAt), "d 'de' MMMM, yyyy", { locale: es })}
+                            </p>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setCaseToEdit(patientCase)
+                              setShowCaseModal(true)
+                            }}
+                          >
+                            <Pencil className="mr-2 h-4 w-4" />
+                            Editar
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <Separator />
@@ -196,6 +270,24 @@ export function PatientDetail({ patientId, onScheduleAppointment }: PatientDetai
         onOpenChange={setShowEditModal}
         patientToEdit={patient}
         onPatientCreated={setPatient}
+      />
+
+      <PatientCaseModal
+        open={showCaseModal}
+        onOpenChange={setShowCaseModal}
+        patientId={patient.id}
+        patientCaseToEdit={caseToEdit}
+        onSaved={() => {
+          setCaseToEdit(null)
+        }}
+      />
+
+      <PrescriptionModal
+        open={showPrescriptionModal}
+        onOpenChange={setShowPrescriptionModal}
+        patient={patient}
+        cases={cases}
+        onCasesChanged={loadDetail}
       />
     </>
   )
