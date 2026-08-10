@@ -37,22 +37,34 @@ export function CreatePatientModal({
     nombre: '',
     apellido: '',
     dni: initialDni,
+    initialCase: {
+      art: '',
+      numeroSiniestro: '',
+    },
   }
   const [formData, setFormData] = useState({
     nombre: '',
     apellido: '',
     dni: initialDni,
+    initialCase: {
+      art: '',
+      numeroSiniestro: '',
+    },
   })
   const [loading, setLoading] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<FormFieldErrors>({})
 
   const resetFormState = () => {
     setFieldErrors({})
-    setFormData({
-      nombre: '',
-      apellido: '',
-      dni: initialDni,
-    })
+      setFormData({
+        nombre: '',
+        apellido: '',
+        dni: initialDni,
+        initialCase: {
+          art: '',
+          numeroSiniestro: '',
+        },
+      })
   }
 
   useEffect(() => {
@@ -65,6 +77,10 @@ export function CreatePatientModal({
         nombre: patientToEdit.nombre,
         apellido: patientToEdit.apellido,
         dni: patientToEdit.dni,
+        initialCase: {
+          art: '',
+          numeroSiniestro: '',
+        },
       })
       return
     }
@@ -79,7 +95,11 @@ export function CreatePatientModal({
 
     try {
       const savedPatient = patientToEdit
-        ? await updatePatient(patientToEdit.id, formData)
+        ? await updatePatient(patientToEdit.id, {
+            nombre: formData.nombre,
+            apellido: formData.apellido,
+            dni: formData.dni,
+          })
         : await createPatient(formData)
 
       onPatientCreated?.(savedPatient)
@@ -125,6 +145,27 @@ export function CreatePatientModal({
     })
   }
 
+  const updateInitialCaseField = (field: 'art' | 'numeroSiniestro', value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      initialCase: {
+        ...prev.initialCase,
+        [field]: value,
+      },
+    }))
+
+    setFieldErrors((prev) => {
+      const nextErrors = { ...prev }
+      const errorKey = `initialCase.${field}`
+      if (!nextErrors[errorKey]) {
+        return prev
+      }
+
+      delete nextErrors[errorKey]
+      return nextErrors
+    })
+  }
+
   const handleOpenChange = (nextOpen: boolean) => {
     if (!nextOpen) {
       resetFormState()
@@ -136,10 +177,12 @@ export function CreatePatientModal({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-[460px]">
-        <DialogHeader>
-          <DialogTitle>{patientToEdit ? 'Editar paciente' : 'Nuevo paciente'}</DialogTitle>
-          <DialogDescription>
-            Para el MVP solo guardamos nombre, apellido y DNI.
+          <DialogHeader>
+            <DialogTitle>{patientToEdit ? 'Editar paciente' : 'Nuevo paciente'}</DialogTitle>
+            <DialogDescription>
+            {patientToEdit
+              ? 'Actualiza los datos basicos del paciente.'
+              : 'Para emitir recetas, el alta inicial requiere un caso con ART y numero de siniestro.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -184,6 +227,43 @@ export function CreatePatientModal({
               />
               <FieldError errors={fieldErrors.dni?.map((message) => ({ message }))} />
             </Field>
+
+            {!patientToEdit ? (
+              <>
+                <div className="rounded-lg border border-border bg-muted/30 p-4">
+                  <p className="text-sm font-medium">Caso inicial</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Se usara para dejar al paciente listo para emitir recetas.
+                  </p>
+                </div>
+
+                <Field data-invalid={fieldErrors['initialCase.art']?.length ? true : undefined}>
+                  <FieldLabel htmlFor="art">ART *</FieldLabel>
+                  <Input
+                    id="art"
+                    value={formData.initialCase.art}
+                    onChange={(e) => updateInitialCaseField('art', e.target.value)}
+                    placeholder="Ej. Provincia ART"
+                    aria-invalid={fieldErrors['initialCase.art']?.length ? true : undefined}
+                    required
+                  />
+                  <FieldError errors={fieldErrors['initialCase.art']?.map((message) => ({ message }))} />
+                </Field>
+
+                <Field data-invalid={fieldErrors['initialCase.numeroSiniestro']?.length ? true : undefined}>
+                  <FieldLabel htmlFor="numeroSiniestro">N° de siniestro *</FieldLabel>
+                  <Input
+                    id="numeroSiniestro"
+                    value={formData.initialCase.numeroSiniestro}
+                    onChange={(e) => updateInitialCaseField('numeroSiniestro', e.target.value)}
+                    placeholder="Numero de siniestro"
+                    aria-invalid={fieldErrors['initialCase.numeroSiniestro']?.length ? true : undefined}
+                    required
+                  />
+                  <FieldError errors={fieldErrors['initialCase.numeroSiniestro']?.map((message) => ({ message }))} />
+                </Field>
+              </>
+            ) : null}
           </div>
 
           <DialogFooter>

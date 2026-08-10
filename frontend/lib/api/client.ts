@@ -1,6 +1,6 @@
 'use client'
 
-import { Appointment, AppointmentStatus, Art, ArtPharmacyCoverage, AttendanceRecord, AuthUser, ManagedUser, Medication, Patient, PatientTimelineItem, Pharmacy, PharmacyBranch } from '@/lib/types'
+import { Appointment, AppointmentStatus, Art, ArtPharmacyCoverage, AttendanceRecord, AuthUser, ManagedUser, Medication, Patient, PatientCase, PatientTimelineItem, Pharmacy, PharmacyBranch } from '@/lib/types'
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'
 
@@ -113,6 +113,17 @@ function mapPatient(patient: {
   updatedAt: string
 }): Patient {
   return patient
+}
+
+function mapPatientCase(patientCase: {
+  id: string
+  patientId: string
+  art: string
+  numeroSiniestro: string
+  createdAt: string
+  updatedAt: string
+}): PatientCase {
+  return patientCase
 }
 
 function mapAppointment(appointment: {
@@ -339,7 +350,15 @@ export async function listPatients(params: {
   }
 }
 
-export async function createPatient(payload: Pick<Patient, 'nombre' | 'apellido' | 'dni'>) {
+export async function createPatient(payload: {
+  nombre: string
+  apellido: string
+  dni: string
+  initialCase: {
+    art: string
+    numeroSiniestro: string
+  }
+}) {
   const data = await request<{
     patient: {
       id: string
@@ -391,13 +410,66 @@ export async function getPatientDetail(patientId: string) {
       createdAt: string
       updatedAt: string
     }
+    cases: Array<Parameters<typeof mapPatientCase>[0]>
     timeline: PatientTimelineItem[]
   }>(`/patients/${patientId}`)
 
   return {
     patient: mapPatient(data.patient),
+    cases: data.cases.map(mapPatientCase),
     timeline: data.timeline,
   }
+}
+
+export async function listPatientCases(patientId: string) {
+  const data = await request<{ items: Array<Parameters<typeof mapPatientCase>[0]> }>(`/patients/${patientId}/cases`)
+  return data.items.map(mapPatientCase)
+}
+
+export async function createPatientCase(patientId: string, payload: {
+  art: string
+  numeroSiniestro: string
+}) {
+  const data = await request<{ patientCase: Parameters<typeof mapPatientCase>[0] }>(`/patients/${patientId}/cases`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+
+  return mapPatientCase(data.patientCase)
+}
+
+export async function updatePatientCase(patientId: string, caseId: string, payload: {
+  art?: string
+  numeroSiniestro?: string
+}) {
+  const data = await request<{ patientCase: Parameters<typeof mapPatientCase>[0] }>(`/patients/${patientId}/cases/${caseId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  })
+
+  return mapPatientCase(data.patientCase)
+}
+
+export async function getPrescriptionPreview(patientId: string, payload: {
+  patientCaseId: string
+  texto: string
+}) {
+  return request<{
+    patient: Parameters<typeof mapPatient>[0]
+    patientCase: Parameters<typeof mapPatientCase>[0]
+    texto: string
+    fecha: string
+    logoPath: string
+  }>(`/patients/${patientId}/prescription-preview`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  }).then((data) => ({
+    patient: mapPatient(data.patient),
+    patientCase: mapPatientCase(data.patientCase),
+    texto: data.texto,
+    fecha: data.fecha,
+    logoPath: data.logoPath,
+  }))
 }
 
 export async function listAppointments(params: {

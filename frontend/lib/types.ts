@@ -29,14 +29,15 @@ export interface Patient {
   dni: string
   createdAt: string
   updatedAt?: string
-  telefono?: string
-  email?: string
-  fechaNacimiento?: string
-  art?: string
-  numeroSiniestro?: string
-  fechaAccidente?: string
-  diagnostico?: string
-  observaciones?: string
+}
+
+export interface PatientCase {
+  id: string
+  patientId: string
+  art: string
+  numeroSiniestro: string
+  createdAt: string
+  updatedAt: string
 }
 
 export interface Appointment {
