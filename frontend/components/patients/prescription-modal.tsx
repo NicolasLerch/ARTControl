@@ -26,6 +26,7 @@ interface PrescriptionPreviewData {
   patient: Patient
   patientCase: PatientCase
   texto: string
+  diagnostico: string
   fecha: string
   logoPath: string
 }
@@ -49,7 +50,12 @@ function buildRecipeBlock(preview: PrescriptionPreviewData, absoluteLogoPath: st
     <section class="recipe">
       <div class="header">
         <img class="logo" src="${absoluteLogoPath}" alt="RPC" />
-        <div class="title">RECETA</div>
+        <div class="company-data">
+          <div class="company-name">Red Prestacional Córdoba SRL</div>
+          <div>Humberto Primo 843 - 2° Piso - Oficina B</div>
+          <div>Tel: 0351 - 5711234</div>
+          <div>Email: info@rpcsrlweb.com.ar - Web: www.rpcsrlweb.com.ar</div>
+        </div>
       </div>
       <div class="meta">
         <div><span class="label">Paciente:</span> ${preview.patient.apellido}, ${preview.patient.nombre}</div>
@@ -58,6 +64,7 @@ function buildRecipeBlock(preview: PrescriptionPreviewData, absoluteLogoPath: st
         <div><span class="label">N° de siniestro:</span> ${preview.patientCase.numeroSiniestro}</div>
       </div>
       <div class="content">${textoHtml}</div>
+      <div class="diagnosis"><span class="diagnosis-label">Diagnóstico:</span> ${preview.diagnostico}</div>
       <div class="footer">
         <div class="footer-block">
           <div class="footer-value">${fecha}</div>
@@ -91,12 +98,15 @@ function buildPrintHtml(preview: PrescriptionPreviewData, absoluteLogoPath: stri
       body { font-family: Arial, sans-serif; color: #111827; margin: 0; }
       .page { display: grid; grid-template-columns: ${withDuplicate ? '1fr 1fr' : '1fr'}; gap: 10mm; }
       .recipe { height: 190mm; max-width: ${withDuplicate ? 'none' : '138mm'}; padding: 8mm 10mm; display: flex; flex-direction: column; }
-      .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid #d1d5db; }
-      .logo { width: 160px; height: auto; }
-      .title { font-size: 26px; font-weight: 700; letter-spacing: 0.04em; }
+      .header { display: flex; flex-direction: column; align-items: center; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid #d1d5db; text-align: center; }
+      .logo { width: 210px; height: auto; }
+      .company-data { margin-top: 10px; font-size: 14px; line-height: 1.45; }
+      .company-name { font-size: 16px; font-weight: 700; }
       .meta { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 20px; margin-bottom: 18px; padding-bottom: 10px; border-bottom: 1px solid #d1d5db; font-size: 15px; }
       .label { font-weight: 700; }
       .content { flex: 1; padding-top: 4px; font-size: 17px; line-height: 1.65; }
+      .diagnosis { margin-top: 18px; margin-bottom: 20px; font-size: 16px; line-height: 1.5; }
+      .diagnosis-label { font-weight: 700; }
       .footer { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; margin-top: auto; padding-top: 24px; }
       .footer-block { min-width: 180px; text-align: center; }
       .footer-value { padding-bottom: 8px; }
@@ -114,9 +124,14 @@ function buildPrintHtml(preview: PrescriptionPreviewData, absoluteLogoPath: stri
 function PrescriptionPreview({ preview }: { preview: PrescriptionPreviewData }) {
   return (
     <div className="flex min-h-[680px] flex-col rounded-2xl border border-border bg-white p-8 text-slate-900 shadow-sm">
-      <div className="flex items-start justify-between gap-6 border-b border-slate-200 pb-6">
-        <img src={preview.logoPath} alt="RPC" className="block h-auto w-[180px]" />
-        <div className="text-right text-2xl font-bold tracking-[0.18em]">RECETA</div>
+      <div className="border-b border-slate-200 pb-6 text-center">
+        <img src={preview.logoPath} alt="RPC" className="mx-auto block h-auto w-[220px]" />
+        <div className="mt-3 space-y-1 text-sm leading-6 text-slate-700">
+          <p className="text-base font-semibold text-slate-900">Red Prestacional Córdoba SRL</p>
+          <p>Humberto Primo 843 - 2° Piso - Oficina B</p>
+          <p>Tel: 0351 - 5711234</p>
+          <p>Email: info@rpcsrlweb.com.ar - Web: www.rpcsrlweb.com.ar</p>
+        </div>
       </div>
 
       <div className="mt-6 grid gap-3 border-b border-slate-200 pb-5 text-sm sm:grid-cols-2 sm:text-base">
@@ -131,6 +146,16 @@ function PrescriptionPreview({ preview }: { preview: PrescriptionPreviewData }) 
           preview.texto
         ) : (
           <span className="text-muted-foreground">El texto de la receta aparecerá aquí.</span>
+        )}
+      </div>
+
+      <div className="mt-6 mb-5 px-1 text-base leading-7">
+        {preview.diagnostico.trim() ? (
+          <p><span className="font-semibold">Diagnóstico:</span> {preview.diagnostico}</p>
+        ) : (
+          <p className="text-muted-foreground">
+            <span className="font-semibold">Diagnóstico:</span> Completa el diagnóstico para habilitar la impresión.
+          </p>
         )}
       </div>
 
@@ -157,20 +182,22 @@ export function PrescriptionModal({
 }: PrescriptionModalProps) {
   const [selectedCaseId, setSelectedCaseId] = useState('')
   const [texto, setTexto] = useState('')
+  const [diagnostico, setDiagnostico] = useState('')
   const [withDuplicate, setWithDuplicate] = useState(false)
   const [showCaseModal, setShowCaseModal] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<FormFieldErrors>({})
 
   const selectedCase = cases.find((patientCase) => patientCase.id === selectedCaseId) ?? null
   const hasPreviewData = Boolean(selectedCase)
-  const canPrint = Boolean(selectedCase && texto.trim())
+  const canPrint = Boolean(selectedCase && texto.trim() && diagnostico.trim())
   const preview: PrescriptionPreviewData | null = selectedCase
     ? {
         patient,
         patientCase: selectedCase,
         texto,
+        diagnostico,
         fecha: new Date().toISOString(),
-        logoPath: '/RPC-logo.png',
+        logoPath: '/RPC-logo.jpg',
       }
     : null
 
@@ -181,6 +208,7 @@ export function PrescriptionModal({
 
     setSelectedCaseId(cases[0]?.id ?? '')
     setTexto('')
+    setDiagnostico('')
     setWithDuplicate(false)
     setFieldErrors({})
   }, [open, cases])
@@ -244,7 +272,7 @@ export function PrescriptionModal({
           <DialogHeader>
             <DialogTitle>Generar receta</DialogTitle>
             <DialogDescription>
-              Selecciona un siniestro del paciente, redacta el texto y genera una vista previa lista para imprimir o guardar como PDF.
+              Selecciona un siniestro del paciente, redacta el texto y completa el diagnóstico para imprimir la receta.
             </DialogDescription>
           </DialogHeader>
 
@@ -300,10 +328,22 @@ export function PrescriptionModal({
                   value={texto}
                   onChange={(e) => setTexto(e.target.value)}
                   placeholder="Indique aqui el contenido de la receta..."
-                  rows={12}
+                  rows={10}
                   aria-invalid={fieldErrors.texto?.length ? true : undefined}
                 />
                 {fieldErrors.texto?.length ? <p className="text-sm text-destructive">{fieldErrors.texto[0]}</p> : null}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="prescription-diagnosis">Diagnóstico</Label>
+                <Textarea
+                  id="prescription-diagnosis"
+                  value={diagnostico}
+                  onChange={(e) => setDiagnostico(e.target.value)}
+                  placeholder="Ingrese el diagnóstico..."
+                  rows={4}
+                  required
+                />
               </div>
 
               <div className="flex items-center gap-3 rounded-xl border border-border bg-muted/20 px-4 py-3">
