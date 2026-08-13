@@ -296,7 +296,7 @@ patientsRouter.post('/:id/prescription-preview', async (req, res, next) => {
             patientCase: serializePatientCase(patientCase),
             texto: payload.texto.trim(),
             fecha: new Date().toISOString(),
-            logoPath: '/RPC-logo.png',
+            logoPath: '/RPC-logo.jpg',
         });
     }
     catch (error) {
