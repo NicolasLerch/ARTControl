@@ -3,11 +3,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { Clock, MoreVertical, Pencil, Trash2, UserCheck, UserPlus } from 'lucide-react'
+import { Clock, FileText, MoreVertical, Pencil, Trash2, UserCheck, UserPlus } from 'lucide-react'
 
-import { deleteAttendance, listAppointments, listAttendances } from '@/lib/api/client'
+import { deleteAttendance, getPatientDetail, listAppointments, listAttendances } from '@/lib/api/client'
 import { emitDataChanged, subscribeDataChanged } from '@/lib/api/events'
-import { Appointment, AttendanceRecord, Patient } from '@/lib/types'
+import { Appointment, AttendanceRecord, Patient, PatientCase } from '@/lib/types'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -27,6 +27,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { CreateAttendanceModal } from '@/components/attended/create-attendance-modal'
+import { PrescriptionModal } from '@/components/patients/prescription-modal'
 
 function parseLocalDate(dateString: string) {
   const [year, month, day] = dateString.split('-').map(Number)
@@ -71,6 +72,8 @@ export function AttendedToday() {
   const [attendances, setAttendances] = useState<AttendanceRecord[]>([])
   const [showAttendanceModal, setShowAttendanceModal] = useState(false)
   const [editingAttendance, setEditingAttendance] = useState<AttendanceRecord | null>(null)
+  const [prescriptionPatient, setPrescriptionPatient] = useState<Patient | null>(null)
+  const [prescriptionCases, setPrescriptionCases] = useState<PatientCase[]>([])
   const [selectedDate, setSelectedDate] = useState(() => format(new Date(), 'yyyy-MM-dd'))
 
   useEffect(() => {
@@ -149,6 +152,24 @@ export function AttendedToday() {
 
     await deleteAttendance(row.attendance.id)
     emitDataChanged()
+  }
+
+  const handleGeneratePrescription = async (patientId: string) => {
+    try {
+      const detail = await getPatientDetail(patientId)
+      setPrescriptionPatient(detail.patient)
+      setPrescriptionCases(detail.cases)
+    } catch {
+      // The shared API client displays the request error; avoid opening an incomplete modal.
+    }
+  }
+
+  const refreshPrescriptionCases = async () => {
+    if (!prescriptionPatient) return
+
+    const detail = await getPatientDetail(prescriptionPatient.id)
+    setPrescriptionPatient(detail.patient)
+    setPrescriptionCases(detail.cases)
   }
 
   const linkedAppointment = editingAttendance?.appointmentId
@@ -234,6 +255,10 @@ export function AttendedToday() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => handleGeneratePrescription(row.patient!.id)}>
+                                <FileText className="mr-2 h-4 w-4" />
+                                Generar receta
+                              </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => row.attendance && handleEditAttendance(row)} disabled={!row.attendance}>
                                 <Pencil className="mr-2 h-4 w-4" />
                                 Editar atencion
@@ -294,6 +319,21 @@ export function AttendedToday() {
         attendanceToEdit={editingAttendance}
         linkedAppointment={linkedAppointment}
       />
+
+      {prescriptionPatient ? (
+        <PrescriptionModal
+          open={Boolean(prescriptionPatient)}
+          onOpenChange={(open) => {
+            if (!open) {
+              setPrescriptionPatient(null)
+              setPrescriptionCases([])
+            }
+          }}
+          patient={prescriptionPatient}
+          cases={prescriptionCases}
+          onCasesChanged={refreshPrescriptionCases}
+        />
+      ) : null}
     </>
   )
 }
