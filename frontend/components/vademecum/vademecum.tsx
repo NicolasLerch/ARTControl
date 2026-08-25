@@ -22,7 +22,9 @@ import { Spinner } from '@/components/ui/spinner'
 import { listMedications, ApiError, createMedication, updateMedication, deleteMedication } from '@/lib/api/client'
 import { subscribeDataChanged } from '@/lib/api/events'
 import { Medication, UserRole } from '@/lib/types'
-import { Search, Pill, Building, FlaskConical, Copy, Plus, MoreVertical, Pencil, Trash2 } from 'lucide-react'
+import { Search, Pill, Building, FlaskConical, Copy, Plus, MoreVertical, Pencil, Trash2, ChevronLeft, ChevronRight } from 'lucide-react'
+
+const PAGE_SIZE = 25
 
 function sortMedicationsAlphabetically(items: Medication[]) {
   return [...items].sort((a, b) =>
@@ -34,6 +36,7 @@ function sortMedicationsAlphabetically(items: Medication[]) {
 
 export function Vademecum({ userRole }: { userRole: UserRole }) {
   const [searchQuery, setSearchQuery] = useState('')
+  const [page, setPage] = useState(1)
   const [medications, setMedications] = useState<Medication[]>([])
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -94,7 +97,8 @@ export function Vademecum({ userRole }: { userRole: UserRole }) {
       try {
         const response = await listMedications({
           q: searchQuery || undefined,
-          pageSize: 100,
+          page,
+          pageSize: PAGE_SIZE,
         })
 
         if (active) {
@@ -130,7 +134,9 @@ export function Vademecum({ userRole }: { userRole: UserRole }) {
       window.clearTimeout(timeoutId)
       unsubscribe()
     }
-  }, [searchQuery])
+  }, [page, searchQuery])
+
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
   return (
     <Card className="h-full">
@@ -159,7 +165,10 @@ export function Vademecum({ userRole }: { userRole: UserRole }) {
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => {
+              setSearchQuery(e.target.value)
+              setPage(1)
+            }}
             placeholder="Buscar por droga, nombre comercial o laboratorio..."
             className="pl-9"
           />
@@ -260,6 +269,34 @@ export function Vademecum({ userRole }: { userRole: UserRole }) {
             </Table>
           </div>
         )}
+
+        {!loading && !error && total > 0 ? (
+          <div className="mt-4 flex items-center justify-between gap-3">
+            <p className="text-sm text-muted-foreground">
+              Página {page} de {totalPages}
+            </p>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage((current) => current - 1)}
+                disabled={page === 1}
+              >
+                <ChevronLeft className="mr-1 h-4 w-4" />
+                Anterior
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage((current) => current + 1)}
+                disabled={page === totalPages}
+              >
+                Siguiente
+                <ChevronRight className="ml-1 h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        ) : null}
         
         {/* Usage info */}
         <div className="mt-6 rounded-lg border border-border bg-muted/30 p-4">
@@ -267,6 +304,10 @@ export function Vademecum({ userRole }: { userRole: UserRole }) {
           <p className="mt-1 text-sm text-muted-foreground">
             Este vademécum es una referencia rápida. Consulte siempre el prospecto oficial 
             y verifique contraindicaciones antes de prescribir.
+          </p>
+          <p className="mt-3 text-xs text-muted-foreground">
+            Vademécum desarrollado con la colaboración del Dr. Galván Sebastián, basado en su idea original, y
+            responsable de la mayor parte de la base de datos.
           </p>
         </div>
       </CardContent>
